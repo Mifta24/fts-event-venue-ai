@@ -524,4 +524,30 @@ class HotelLobbyTest extends TestCase
         $this->assertSame('wifi', $icon('Internet', ['wifi']));
         $this->assertSame('star', $icon('Kids club'));
     }
+
+    public function test_every_menu_item_and_chat_chip_leads_to_its_scene_with_a_topic_for_the_concierge(): void
+    {
+        Hotel::create(['name' => 'Demo', 'slug' => 'demo', 'public_status' => 'published']);
+
+        $scenes = [
+            'hotel.rooms' => 'Saya ingin melihat pilihan kamar yang tersedia.',
+            'hotel.facilities' => 'Apa saja fasilitas yang tersedia di hotel ini?',
+            'hotel.info' => 'Apa kebijakan check-in, check-out, dan pembatalan?',
+            'hotel.reservation' => 'Saya ingin reservasi kamar. Bantu saya cek ketersediaan.',
+            'hotel.staff' => 'Saya ingin bicara dengan staf hotel.',
+        ];
+
+        $response = $this->get('/demo?lang=id')->assertOk();
+
+        foreach ($scenes as $route => $topic) {
+            $url = route($route, ['hotelSlug' => 'demo', 'lang' => 'id']);
+
+            $response->assertSee('href="'.$url.'"', false);
+            $this->get($url)->assertOk();
+        }
+
+        $response->assertSee('data-topic="Saya ingin melihat pilihan kamar yang tersedia."', false)
+            ->assertSeeInOrder(['class="chat-chips"', 'data-stage-exit', 'data-topic="Saya ingin melihat pilihan kamar yang tersedia."'], false)
+            ->assertSee('data-topic="Saya ingin bicara dengan staf hotel."', false);
+    }
 }

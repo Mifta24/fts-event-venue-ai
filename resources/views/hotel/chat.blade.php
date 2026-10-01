@@ -98,9 +98,13 @@
                 <span class="chat-launcher-arrow" aria-hidden="true">↗</span>
             </button>
 
+            {{-- Each chip walks the guest to its scene; the concierge then carries on with that topic. --}}
+            @php
+                $chipLabels = ['rooms' => $labels['menu_rooms'], 'facilities' => $labels['menu_facilities'], 'info' => $labels['menu_policies'], 'reservation' => $lobby['start_booking'], 'staff' => $labels['menu_staff']];
+            @endphp
             <ul class="chat-chips" aria-label="{{ $labels['menu_heading'] }}">
-                @foreach ([[$labels['menu_rooms'], $labels['menu_rooms_q']], [$labels['menu_facilities'], $labels['menu_facilities_q']], [$labels['menu_policies'], $labels['menu_policies_q']], [$lobby['start_booking'], $lobby['reservation_q']], [$labels['menu_staff'], $labels['menu_staff_q']]] as [$chip, $question])
-                    <li><button type="button" data-hero-quick-message="{{ $question }}">{{ $chip }} <span aria-hidden="true">›</span></button></li>
+                @foreach ($menuItems as $item)
+                    <li><a href="{{ $item['href'] }}" data-stage-exit data-topic="{{ $item['topic'] }}" @if($item['tour']) data-tour-line="{{ $item['tour'] }}" @endif>{{ $chipLabels[$item['key']] ?? $item['label'] }} <span aria-hidden="true">›</span></a></li>
                 @endforeach
             </ul>
         </div>

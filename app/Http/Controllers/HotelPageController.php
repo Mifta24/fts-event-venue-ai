@@ -394,7 +394,7 @@ class HotelPageController extends Controller
      *
      * @param  array<string, string>  $labels
      * @param  array<string, string>  $lobby
-     * @return list<array{key: string, label: string, href: string, exit: bool, tour: ?string}>
+     * @return list<array{key: string, label: string, href: string, exit: bool, tour: ?string, topic: string}>
      */
     private function stageMenu(Hotel $hotel, string $locale, array $labels, array $lobby): array
     {
@@ -407,11 +407,11 @@ class HotelPageController extends Controller
         $staffUrl = route('hotel.staff', ['hotelSlug' => $hotel->slug, 'lang' => $locale]);
 
         return [
-            ['key' => 'rooms', 'label' => $labels['rooms_heading'], 'href' => $roomsUrl, 'exit' => true, 'tour' => $tour['tour_rooms']],
-            ['key' => 'facilities', 'label' => $labels['menu_facilities'], 'href' => $facilitiesUrl, 'exit' => true, 'tour' => $tour['tour_facilities']],
-            ['key' => 'info', 'label' => $lobby['menu_info'], 'href' => $infoUrl, 'exit' => true, 'tour' => $tour['tour_info']],
-            ['key' => 'reservation', 'label' => $lobby['reservation'], 'href' => $reservationUrl, 'exit' => true, 'tour' => $tour['tour_reservation']],
-            ['key' => 'staff', 'label' => $labels['menu_staff'], 'href' => $staffUrl, 'exit' => true, 'tour' => $tour['tour_staff']],
+            ['key' => 'rooms', 'label' => $labels['rooms_heading'], 'href' => $roomsUrl, 'exit' => true, 'tour' => $tour['tour_rooms'], 'topic' => $labels['menu_rooms_q']],
+            ['key' => 'facilities', 'label' => $labels['menu_facilities'], 'href' => $facilitiesUrl, 'exit' => true, 'tour' => $tour['tour_facilities'], 'topic' => $labels['menu_facilities_q']],
+            ['key' => 'info', 'label' => $lobby['menu_info'], 'href' => $infoUrl, 'exit' => true, 'tour' => $tour['tour_info'], 'topic' => $labels['menu_policies_q']],
+            ['key' => 'reservation', 'label' => $lobby['reservation'], 'href' => $reservationUrl, 'exit' => true, 'tour' => $tour['tour_reservation'], 'topic' => $lobby['reservation_q']],
+            ['key' => 'staff', 'label' => $labels['menu_staff'], 'href' => $staffUrl, 'exit' => true, 'tour' => $tour['tour_staff'], 'topic' => $labels['menu_staff_q']],
         ];
     }
 

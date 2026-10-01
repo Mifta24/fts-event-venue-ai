@@ -13,13 +13,13 @@
  * stage; menu, panels and chat float above it and scroll only internally.
  */
 .stage-page { height: 100dvh; overflow: hidden; background: #142321; color: white; }
-.stage { --header: 84px; --col: clamp(300px, 26vw, 380px); --dock: 156px; --chat-launcher-height: 52px; --chat-composer-height: 58px; position: relative; height: 100dvh; overflow: hidden; isolation: isolate; }
-.stage-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--stage-focus, center 22%); transform-origin: 62% 38%; transition: transform 1s cubic-bezier(.2, .7, .2, 1), filter 1s ease; animation: lobby-arrive 1.4s ease-out backwards; z-index: -2; }
-.stage-character { position: absolute; z-index: 0; bottom: 0; height: min(94%, 1000px); width: auto; max-width: 62%; object-fit: contain; object-position: bottom; pointer-events: none; animation: character-arrive .8s ease-out .1s both; }
+.stage { --ease-cine: cubic-bezier(.22, .8, .24, 1); --header: 84px; --col: clamp(300px, 26vw, 380px); --dock: 156px; --chat-launcher-height: 52px; --chat-composer-height: 58px; position: relative; height: 100dvh; overflow: hidden; isolation: isolate; }
+.stage-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: var(--stage-focus, center 22%); transform-origin: 62% 38%; transition: transform 1s cubic-bezier(.2, .7, .2, 1), filter 1s ease; animation: stage-settle 1s var(--ease-cine) backwards; z-index: -2; }
+.stage-character { position: absolute; z-index: 0; bottom: 0; height: min(94%, 1000px); width: auto; max-width: 62%; object-fit: contain; object-position: bottom; pointer-events: none; animation: character-arrive .6s var(--ease-cine) .08s backwards; }
 .stage-character[data-anchor="left"] { left: 2%; }
 .stage-character[data-anchor="right"] { right: 2%; }
 .stage-character[data-anchor="center"] { left: 50%; translate: -50% 0; }
-.stage.is-leaving .stage-character { opacity: 0; transition: opacity .3s ease; }
+.stage.is-leaving .stage-character { opacity: 0; transform: translateY(8px) scale(.985); transition: opacity .28s ease, transform .4s var(--ease-cine); }
 @keyframes character-arrive { from { opacity: 0; transform: translateY(18px) scale(.99); } to { opacity: 1; transform: none; } }
 .stage-shade { position: absolute; inset: 0; z-index: -1; background: linear-gradient(0deg, #0f1d1bde 0, #0f1d1b70 24%, transparent 46%), linear-gradient(90deg, #0f1d1bb3, transparent 50%); }
 .stage-header { position: absolute; inset: 0 0 auto; z-index: 5; display: flex; height: var(--header); align-items: center; justify-content: space-between; gap: 16px; padding: 0 32px; }
@@ -38,7 +38,7 @@
 .stage-welcome-scene[data-anchor="bottom"] { top: auto; bottom: calc(var(--dock) + 36px); }
 
 .stage-menu, .opening-panel { border: 1px solid #ffffff38; background: #18312dc7; backdrop-filter: blur(18px); box-shadow: 0 10px 34px #0003; border-radius: 18px; }
-.stage-menu { position: absolute; z-index: 4; right: 24px; top: var(--header); width: var(--col); max-height: calc(100% - var(--header) - 24px); display: flex; flex-direction: column; padding: 24px 20px 20px; }
+.stage-menu { transition: opacity .3s ease, visibility .3s; position: absolute; z-index: 4; right: 24px; top: var(--header); width: var(--col); max-height: calc(100% - var(--header) - 24px); display: flex; flex-direction: column; padding: 24px 20px 20px; }
 .stage-menu > .lobby-eyebrow { color: #f4e6c4; }
 .lobby-navigation { display: flex; flex-direction: column; margin-top: 14px; }
 .lobby-navigation a { display: flex; align-items: center; justify-content: space-between; min-height: 58px; padding: 0 12px; border-bottom: 1px solid #ffffff26; font-size: 14px; transition: background .2s; }
@@ -60,13 +60,13 @@
 .room-nav-name { font-size: 14px; }
 .room-nav-price { font-size: 11px; color: #ffffffb3; }
 .stage-menu-footer { margin-top: auto; padding-top: 18px; font-size: 8px; letter-spacing: .14em; color: #ffffff99; }
-.stage:has(.stage-chat.is-open) .stage-menu { display: none; }
+.stage:has(.stage-chat.is-open) .stage-menu { opacity: 0; visibility: hidden; pointer-events: none; }
 /* On the rooms scenes the right column is the room index, so while the guest
    is chatting it shares the column with the transcript instead of vanishing —
    the concierge can name a room and they can open it straight away. */
 @media (min-height: 760px) {
     .stage[data-scene="rooms"]:has(.stage-chat.is-open) .stage-menu,
-    .stage[data-scene="room"]:has(.stage-chat.is-open) .stage-menu { display: flex; height: 320px; padding-bottom: 12px; }
+    .stage[data-scene="room"]:has(.stage-chat.is-open) .stage-menu { opacity: 1; visibility: visible; pointer-events: auto; height: 320px; padding-bottom: 12px; }
     .stage[data-scene="rooms"]:has(.stage-chat.is-open) .stage-menu-footer,
     .stage[data-scene="room"]:has(.stage-chat.is-open) .stage-menu-footer { display: none; }
     .stage[data-scene="rooms"]:has(.stage-chat.is-open) .chat-log,
@@ -148,8 +148,8 @@
 .chat-bar input { min-width: 0; flex: 1; border: 0; background: transparent; font-size: 15px; outline: none; }
 .chat-bar button { flex-shrink: 0; min-height: 44px; padding: 0 24px; border-radius: 999px; background: #263c35; color: white; font-size: 14px; font-weight: 500; cursor: pointer; }
 .chat-chips { bottom: 24px; display: flex; width: min(900px, calc(100% - var(--col) - 96px)); justify-content: safe center; gap: 10px; overflow-x: auto; scrollbar-width: none; }
-.chat-chips button { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: #ffffffeb; color: #26312f; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background .2s; }
-.chat-chips button:hover { background: white; }
+.chat-chips button, .chat-chips a { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 999px; background: #ffffffeb; color: #26312f; font-size: 13px; white-space: nowrap; cursor: pointer; transition: background .2s; }
+.chat-chips button:hover, .chat-chips a:hover { background: white; }
 .stage button:disabled { cursor: wait; opacity: .5; }
 .stage :focus-visible, .stage-page :focus-visible { outline: 3px solid #d9b968; outline-offset: 3px; }
 .stage-noscript { position: absolute; z-index: 9; inset: auto 12px 12px; padding: 16px; border-radius: 12px; background: #fffbeb; color: #26312f; }
@@ -173,7 +173,7 @@
 .opening-button:hover { transform: translateY(-2px); }
 .opening-empty { padding: 14px 22px; border-radius: 999px; background: #18312dc7; font-size: 14px; }
 
-@keyframes lobby-arrive { from { transform: scale(1.035); opacity: .5; } to { transform: scale(1); opacity: 1; } }
+@keyframes stage-settle { from { scale: 1.05; opacity: .7; } to { scale: 1; opacity: 1; } }
 @media (max-width: 1100px) { .stage { --col: 300px; } .stage-welcome { left: 28px; } }
 @media (max-width: 899px) {
     .stage { --header: 68px; --dock: 128px; }
@@ -203,7 +203,7 @@
     .lobby-content { left: 12px; right: 12px; top: calc(var(--header) + 56px); padding: 20px; border-radius: 16px; }
     .lobby-content h2 { font-size: 28px; }
     .chat-log { left: 12px; right: 12px; width: auto; top: calc(var(--header) + 56px); bottom: 68px; border-radius: 16px; }
-    .stage:has(.stage-chat.is-open) .stage-menu { display: block; }
+    .stage:has(.stage-chat.is-open) .stage-menu { opacity: 1; visibility: visible; pointer-events: auto; }
     .stage:has(.stage-chat.is-open) .chat-chips { display: none; }
     .chat-bar, .chat-chips { left: 50%; width: calc(100% - 24px); }
     .chat-bar { bottom: 68px; padding-left: 20px; }
@@ -221,7 +221,7 @@
 @media (prefers-reduced-motion: reduce) { .stage-image, .stage-character { animation: none; } }
 
 /* Room scene: one room at a time inside the lobby, with a quick fade between rooms. */
-.lobby-content:not([hidden]) { animation: scene-in .35s ease-out both; }
+.lobby-content:not([hidden]) { animation: scene-in .32s var(--ease-cine) both; }
 .room-scene:not([hidden]) { animation: scene-in .3s ease-out both; }
 .room-scene .lobby-eyebrow { color: #958467; }
 .room-scene h2 { font-size: 32px; }
@@ -299,25 +299,40 @@
 .lobby-action:disabled, .wizard-secondary:disabled { cursor: wait; opacity: .55; }
 
 /* Loader, enter transition and arrival */
+@media (prefers-reduced-motion: no-preference) {
+    @view-transition { navigation: auto; }
+    ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .36s; animation-timing-function: ease; }
+}
 .stage-loader { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; background: #142321; color: #f4e6c4; font-size: 14px; letter-spacing: .04em; opacity: 0; pointer-events: none; animation: loader-in .25s ease .3s forwards, loader-out .45s ease 2.6s forwards; }
 .stage-loader.is-ready { opacity: 0; visibility: hidden; animation: none; transition: opacity .3s ease; }
 @keyframes loader-in { to { opacity: 1; } }
 @keyframes loader-out { from { opacity: 1; } to { opacity: 0; visibility: hidden; } }
-.stage.is-leaving .stage-image { transform: scale(1.16); filter: brightness(.6); transition: transform 1s cubic-bezier(.3, .1, .3, 1), filter .8s ease; animation: none; }
-.stage.is-leaving > :not(.stage-image, .stage-shade, .stage-loader, .stage-tour) { opacity: 0; animation: none; transition: opacity .3s ease; }
-.stage-menu, .stage-welcome, .opening-panel, .opening-enter { animation: stage-rise .6s ease .15s both; }
-.chat-bar, .chat-chips { animation: stage-fade .6s ease .3s both; }
-@keyframes stage-rise { from { opacity: 0; translate: 0 14px; } to { opacity: 1; translate: 0 0; } }
+.stage.is-leaving .stage-image { transform: scale(1.09); filter: brightness(.62); transition: transform .8s var(--ease-cine), filter .6s ease; animation: none; }
+.stage.is-leaving > :not(.stage-image, .stage-shade, .stage-loader, .stage-tour) { opacity: 0; animation: none; transition: opacity .22s ease; }
+/* The chat dock sits inside a display:contents wrapper, so it has to be faded by hand. */
+.stage.is-leaving .chat-log, .stage.is-leaving .chat-bar, .stage.is-leaving .chat-chips, .stage.is-leaving .chat-launcher { opacity: 0; pointer-events: none; animation: none; transition: opacity .22s ease; }
+/* `backwards`, not `both`: once they have arrived the resting styles must win again, so the chat dock can fade in and out. */
+.stage-menu, .stage-welcome, .opening-panel, .opening-enter { animation: stage-rise .5s var(--ease-cine) .12s backwards; }
+.chat-bar, .chat-chips, .chat-launcher { animation: stage-fade .5s ease .25s backwards; }
+.lobby-navigation a, .room-nav a, .opening-links li { animation: stage-rise .45s var(--ease-cine) backwards; animation-delay: calc(.2s + var(--i, 0) * 45ms); }
+.lobby-navigation a:nth-child(1), .room-nav a:nth-child(1), .opening-links li:nth-child(1) { --i: 0; }
+.lobby-navigation a:nth-child(2), .room-nav a:nth-child(2), .opening-links li:nth-child(2) { --i: 1; }
+.lobby-navigation a:nth-child(3), .room-nav a:nth-child(3), .opening-links li:nth-child(3) { --i: 2; }
+.lobby-navigation a:nth-child(4), .room-nav a:nth-child(4), .opening-links li:nth-child(4) { --i: 3; }
+.lobby-navigation a:nth-child(n+5), .room-nav a:nth-child(n+5), .opening-links li:nth-child(n+5) { --i: 4; }
+.chat-log-messages > * { animation: bubble-in .32s var(--ease-cine) backwards; }
+@keyframes bubble-in { from { opacity: 0; translate: 0 8px; } to { opacity: 1; translate: 0 0; } }
+@keyframes stage-rise { from { opacity: 0; translate: 0 12px; } to { opacity: 1; translate: 0 0; } }
 @keyframes stage-fade { from { opacity: 0; } to { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
     .stage-loader { animation: none; }
-    .stage-menu, .stage-welcome, .opening-panel, .opening-enter, .chat-bar, .chat-chips { animation: none; }
+    .stage-menu, .stage-welcome, .opening-panel, .opening-enter, .chat-bar, .chat-chips, .chat-launcher, .lobby-navigation a, .room-nav a, .opening-links li, .chat-log-messages > * { animation: none; }
     .stage.is-leaving .stage-image { transition: none; }
 }
 
 /* The AI concierge introducing rooms: camera move, slide-in panel, speaking avatar */
 .stage[data-page="rooms"] .stage-image, .stage[data-page="room"] .stage-image { transform: scale(1.12) translateX(3%); filter: brightness(.82) saturate(1.05); }
-.stage[data-page]:not([data-page="home"]) .lobby-content:not([hidden]) { animation-name: panel-slide; animation-duration: .45s; }
+.stage[data-page]:not([data-page="home"]) .lobby-content:not([hidden]) { animation-name: panel-slide; animation-duration: .4s; animation-delay: .06s; animation-timing-function: var(--ease-cine); }
 @keyframes panel-slide { from { opacity: 0; translate: -28px 0; } to { opacity: 1; translate: 0 0; } }
 .narrator { display: flex; align-items: flex-start; gap: 16px; margin: 18px 0 8px; padding: 16px 18px; border: 1px solid #d9d4c7; border-radius: 16px; background: #fffdf9; }
 .narrator-avatar { position: relative; flex-shrink: 0; width: 64px; height: 64px; border-radius: 50%; background: #c2aa86 var(--concierge-image) no-repeat var(--concierge-focus, 51% 19%); background-size: var(--concierge-zoom, 315%); border: 2px solid #d5c9ad; }
@@ -337,7 +352,8 @@
 .narrator.is-speaking .narrator-wave i:nth-child(2n) { animation-delay: .15s; }
 .narrator.is-speaking .narrator-wave i:nth-child(3) { animation-delay: .3s; }
 .narrator-text { white-space: pre-line; min-height: 3.4em; margin-top: 6px; font-size: 14px; line-height: 1.7; color: #3d4640; }
-.narrator.is-speaking .narrator-text::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #b48c42; animation: narrator-caret .8s steps(1) infinite; }
+.narrator-rest { opacity: 0; }
+.narrator.is-speaking .narrator-typed::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #b48c42; animation: narrator-caret .8s steps(1) infinite; }
 .narrator-actions { display: flex; gap: 14px; margin-top: 8px; }
 .narrator-actions button { font-size: 12px; color: #866c3e; text-decoration: underline; cursor: pointer; }
 .narrator-actions button[hidden] { display: none; }
@@ -349,7 +365,7 @@
     .stage-image { transition: none; }
     .stage[data-page="rooms"] .stage-image, .stage[data-page="room"] .stage-image { transform: none; filter: none; }
     .stage[data-page]:not([data-page="home"]) .lobby-content:not([hidden]) { animation: none; }
-    .narrator.is-speaking .narrator-avatar, .narrator.is-speaking .narrator-avatar::after, .narrator.is-speaking .narrator-wave i, .narrator.is-speaking .narrator-text::after { animation: none; }
+    .narrator.is-speaking .narrator-avatar, .narrator.is-speaking .narrator-avatar::after, .narrator.is-speaking .narrator-wave i, .narrator.is-speaking .narrator-typed::after { animation: none; }
 }
 
 /* Sound toggle */
@@ -364,7 +380,7 @@
 /* What the concierge says while she walks the guest to the next scene */
 .stage-tour { position: absolute; z-index: 20; inset: auto 0 clamp(90px, 22vh, 220px); padding: 0 24px; color: white; font: italic clamp(18px, 2.2vw, 28px)/1.4 Georgia, serif; text-align: center; text-shadow: 0 2px 20px #0009; opacity: 0; pointer-events: none; }
 .stage-tour:empty { display: none; }
-.stage-tour.is-visible { animation: tour-rise .45s ease both; }
+.stage-tour.is-visible { animation: tour-rise .4s var(--ease-cine) both; }
 @keyframes tour-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .stage-tour.is-visible { animation: none; opacity: 1; } }
 

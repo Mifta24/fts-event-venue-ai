@@ -74,12 +74,40 @@ function initNarrators() {
     const fullText = (element) => element.querySelector('[data-narrator-text]').dataset.text;
     const isVisible = (element) => element.getClientRects().length > 0;
 
+    /**
+     * The line is split into the part already "said" and the part still to come.
+     * The unsaid part stays in the layout (just transparent), so the bubble
+     * keeps its final size instead of growing and pushing things around.
+     */
+    function textParts(element) {
+        const target = element.querySelector('[data-narrator-text]');
+        let typed = target.querySelector('.narrator-typed');
+        let rest = target.querySelector('.narrator-rest');
+
+        if (!typed || !rest) {
+            target.textContent = '';
+            typed = document.createElement('span');
+            typed.className = 'narrator-typed';
+            rest = document.createElement('span');
+            rest.className = 'narrator-rest';
+            target.append(typed, rest);
+        }
+
+        return { typed, rest };
+    }
+
+    function setProgress(element, characters, count) {
+        const { typed, rest } = textParts(element);
+        typed.textContent = characters.slice(0, count).join('');
+        rest.textContent = characters.slice(count).join('');
+    }
+
     function reveal(element, { finished = true } = {}) {
         const state = states.get(element);
         if (state?.timer) window.clearTimeout(state.timer);
         if (state) state.timer = null;
 
-        element.querySelector('[data-narrator-text]').textContent = fullText(element);
+        setProgress(element, [...fullText(element)], Infinity);
         if (finished && !state?.speaking) element.classList.remove('is-speaking');
     }
 
@@ -100,16 +128,15 @@ function initNarrators() {
     }
 
     function type(element) {
-        const target = element.querySelector('[data-narrator-text]');
         const characters = [...fullText(element)];
         let index = 0;
 
         element.classList.add('is-speaking');
-        target.textContent = '';
+        setProgress(element, characters, 0);
 
         const step = () => {
             index += 1;
-            target.textContent = characters.slice(0, index).join('');
+            setProgress(element, characters, index);
 
             const state = states.get(element);
             if (index >= characters.length) {
@@ -118,11 +145,11 @@ function initNarrators() {
                 return;
             }
 
-            const pause = /[.!?。！？]/.test(characters[index - 1]) ? 220 : /[,、]/.test(characters[index - 1]) ? 110 : 22;
+            const pause = /[.!?。！？]/.test(characters[index - 1]) ? 130 : /[,、]/.test(characters[index - 1]) ? 65 : 15;
             state.timer = window.setTimeout(step, pause);
         };
 
-        states.get(element).timer = window.setTimeout(step, 350);
+        states.get(element).timer = window.setTimeout(step, 180);
     }
 
     async function speak(element) {

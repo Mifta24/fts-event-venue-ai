@@ -667,6 +667,9 @@ function initConcierge() {
         });
     });
 
+    // A menu pick in the same scene: the concierge answers right where the guest stands.
+    window.addEventListener('concierge:ask', (event) => sendMessage(event.detail.message));
+
     setBusy(true);
     boot().then(() => {
         ready = true;
@@ -675,7 +678,14 @@ function initConcierge() {
         statusBanner.textContent = root.dataset.labelConnectionError;
         statusBanner.classList.remove('hidden');
         messagesEl.appendChild(bubble('assistant', config.labels.intro));
-    }).finally(() => setBusy(false));
+    }).finally(() => {
+        setBusy(false);
+
+        // The guest chose this topic from the menu on the previous scene:
+        // let the new scene settle for a beat, then carry on the conversation.
+        const topic = window.takePendingConciergeTopic?.();
+        if (topic && ready) window.setTimeout(() => sendMessage(topic), 650);
+    });
 }
 
 document.addEventListener('DOMContentLoaded', initConcierge);

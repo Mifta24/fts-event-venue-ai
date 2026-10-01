@@ -46,7 +46,7 @@
             <nav class="lobby-navigation">
                 @foreach ($menuItems as $item)
                     <a href="{{ $item['href'] }}"
-                        @if($item['exit']) data-stage-exit @if($item['tour']) data-tour-line="{{ $item['tour'] }}" @endif @else data-lobby-link="{{ $item['key'] }}" aria-controls="lobby-{{ $item['key'] }}" @endif
+                        @if($item['exit']) data-stage-exit @if($item['tour']) data-tour-line="{{ $item['tour'] }}" @endif data-topic="{{ $item['topic'] }}" @else data-lobby-link="{{ $item['key'] }}" aria-controls="lobby-{{ $item['key'] }}" @endif
                         @if($item['key'] === $scene || ($scene === 'room' && $item['key'] === 'rooms')) aria-current="page" @endif>
                         <span>{{ $item['label'] }}</span><span class="nav-arrow" aria-hidden="true">›</span>
                     </a>
