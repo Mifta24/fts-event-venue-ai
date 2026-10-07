@@ -1,14 +1,52 @@
 /**
- * Full-screen stage chrome shared by the opening screen and the lobby:
- * hides the "preparing" loader once the hero image is ready, and eases the
- * scene out before following an "enter" link so moving between screens feels
- * like walking through the lobby rather than loading a page.
+ * Full-screen stage chrome shared by the opening screen and every floor:
+ * opens the lift doors once the photo is ready, runs the floor display up or
+ * down to the floor the guest chose, and closes the doors again before
+ * following a link — so moving between pages feels like riding the lift
+ * rather than loading a page.
  *
  * A link may carry `data-topic`: the question the guest picked from the menu.
  * It is handed to the AI concierge, which raises it once the next scene is up
  * (or straight away when the guest is already in that scene).
  */
 const TOPIC_KEY = 'concierge_pending_topic';
+const FLOOR_KEY = 'apartment_last_floor';
+const FLOOR_ORDER = ['L', '02', '03', '04', '05', '06'];
+
+/**
+ * The floor display counts through every floor between the last one the guest
+ * was on and this one, with the arrow pointing the way the lift travelled.
+ */
+function runFloorDisplay(stage, reducedMotion) {
+    const current = stage.dataset.floor;
+    const code = stage.querySelector('[data-floor-code]');
+    const arrow = stage.querySelector('[data-floor-arrow]');
+    let previous = null;
+
+    try {
+        previous = sessionStorage.getItem(FLOOR_KEY);
+        sessionStorage.setItem(FLOOR_KEY, current);
+    } catch { /* private mode: the display just shows the current floor */ }
+
+    if (!code || !previous || previous === current) return;
+
+    const from = FLOOR_ORDER.indexOf(previous);
+    const to = FLOOR_ORDER.indexOf(current);
+    if (from < 0 || to < 0) return;
+
+    arrow?.classList.toggle('is-down', to < from);
+    if (reducedMotion) return;
+
+    const step = to > from ? 1 : -1;
+    let index = from;
+    code.textContent = FLOOR_ORDER[index];
+
+    const timer = window.setInterval(() => {
+        index += step;
+        code.textContent = FLOOR_ORDER[index];
+        if (index === to) window.clearInterval(timer);
+    }, 180);
+}
 
 function initStage() {
     const stage = document.querySelector('.stage');
@@ -19,6 +57,11 @@ function initStage() {
     const tour = stage.querySelector('[data-stage-tour]');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const showScene = () => loader?.classList.add('is-ready');
+
+    runFloorDisplay(stage, reducedMotion);
+
+    // On phones the lift panel is a scrolling strip; keep the lit button in view.
+    stage.querySelector('.lift-button[aria-current]')?.scrollIntoView({ block: 'nearest', inline: 'center' });
 
     if (!image || image.complete) {
         showScene();
@@ -47,8 +90,7 @@ function initStage() {
             else sessionStorage.removeItem(TOPIC_KEY);
         } catch { /* private mode: the scene still changes, only the topic is dropped */ }
 
-        // The concierge says where she is taking the guest, then the scene
-        // walks forward into the next one.
+        // The concierge announces the floor while the lift doors close.
         if (line && tour) {
             tour.textContent = line;
             tour.classList.add('is-visible');
@@ -56,10 +98,10 @@ function initStage() {
 
         stage.classList.add('is-leaving');
 
-        const chime = window.hotelSound?.isEnabled() ?? false;
-        if (chime) window.hotelSound.play('enter');
+        const chime = window.apartmentSound?.isEnabled() ?? false;
+        if (chime) window.apartmentSound.play('enter');
 
-        const hold = reducedMotion ? 0 : line ? 820 : chime ? 560 : 320;
+        const hold = reducedMotion ? 0 : line ? 900 : 520;
         window.setTimeout(() => { window.location.href = href; }, hold);
     }
 
@@ -83,7 +125,7 @@ function initStage() {
         });
     });
 
-    window.hotelStage = { leave };
+    window.apartmentStage = { leave };
 }
 
 /** The topic the guest picked on the previous scene, if any (read once). */

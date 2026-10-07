@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
-    'hotel_id',
+    'apartment_id',
     'guest_token',
     'guest_name',
     'guest_email',
@@ -17,7 +17,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
     'status',
     'handover_summary',
     'current_scene',
-    'selected_room_type_id',
+    'selected_unit_type_id',
     'selected_facility_id',
     'reservation_state',
     'last_message_at',
@@ -33,7 +33,7 @@ class Conversation extends Model
     /**
      * The UI scenes the guest can be in while talking to the concierge.
      */
-    public const SCENES = ['lobby', 'reception', 'rooms', 'room_detail', 'facilities', 'facility_detail', 'reservation', 'handover'];
+    public const SCENES = ['lobby', 'reception', 'units', 'unit_detail', 'facilities', 'facility_detail', 'reservation', 'handover'];
 
     protected function casts(): array
     {
@@ -43,19 +43,19 @@ class Conversation extends Model
         ];
     }
 
-    public function hotel(): BelongsTo
+    public function apartment(): BelongsTo
     {
-        return $this->belongsTo(Hotel::class);
+        return $this->belongsTo(Apartment::class);
     }
 
-    public function selectedRoomType(): BelongsTo
+    public function selectedUnitType(): BelongsTo
     {
-        return $this->belongsTo(RoomType::class, 'selected_room_type_id');
+        return $this->belongsTo(UnitType::class, 'selected_unit_type_id');
     }
 
     public function selectedFacility(): BelongsTo
     {
-        return $this->belongsTo(HotelKnowledgeItem::class, 'selected_facility_id');
+        return $this->belongsTo(ApartmentKnowledgeItem::class, 'selected_facility_id');
     }
 
     public function messages(): HasMany

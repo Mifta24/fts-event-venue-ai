@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Apartment;
 use App\Models\Conversation;
 use App\Models\ConversationMessage;
-use App\Models\Hotel;
 use App\Services\Concierge\ConciergeService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,15 +18,15 @@ class ConciergeChatController extends Controller
 
     public function __construct(private readonly ConciergeService $concierge) {}
 
-    public function start(Request $request, string $hotelSlug): JsonResponse
+    public function start(Request $request, string $apartmentSlug): JsonResponse
     {
-        $hotel = $this->publishedHotel($hotelSlug);
+        $apartment = $this->publishedApartment($apartmentSlug);
 
         $locale = in_array($request->input('locale'), self::SUPPORTED_LOCALES, true)
             ? $request->input('locale')
-            : $hotel->default_locale;
+            : $apartment->default_locale;
 
-        $conversation = $this->concierge->startConversation($hotel, $locale);
+        $conversation = $this->concierge->startConversation($apartment, $locale);
 
         return response()->json([
             'guest_token' => $conversation->guest_token,
@@ -34,38 +34,38 @@ class ConciergeChatController extends Controller
         ]);
     }
 
-    public function message(Request $request, string $hotelSlug): JsonResponse
+    public function message(Request $request, string $apartmentSlug): JsonResponse
     {
-        $hotel = $this->publishedHotel($hotelSlug);
+        $apartment = $this->publishedApartment($apartmentSlug);
 
         $data = $request->validate([
             'guest_token' => ['required', 'uuid'],
             'message' => ['required', 'string', 'max:2000'],
             'scene' => ['nullable', Rule::in(Conversation::SCENES)],
-            'selected_room' => ['nullable', 'string', 'max:120'],
+            'selected_unit' => ['nullable', 'string', 'max:120'],
             'selected_facility' => ['nullable', 'integer', 'min:1'],
             'reservation' => ['nullable', 'array'],
             'reservation.check_in' => ['nullable', 'date_format:Y-m-d'],
             'reservation.check_out' => ['nullable', 'date_format:Y-m-d'],
             'reservation.adults' => ['nullable', 'integer', 'min:1', 'max:20'],
             'reservation.children' => ['nullable', 'integer', 'min:0', 'max:10'],
-            'reservation.rooms' => ['nullable', 'integer', 'min:1', 'max:10'],
-            'reservation.room_type_slug' => ['nullable', 'string', 'max:120'],
+            'reservation.units' => ['nullable', 'integer', 'min:1', 'max:10'],
+            'reservation.unit_type_slug' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $conversation = $this->findConversation($hotel, $data['guest_token']);
+        $conversation = $this->findConversation($apartment, $data['guest_token']);
 
-        $this->concierge->rememberContext($hotel, $conversation, [
+        $this->concierge->rememberContext($apartment, $conversation, [
             'scene' => $data['scene'] ?? null,
             'selected_facility' => $data['selected_facility'] ?? null,
-            'selected_room' => $data['selected_room'] ?? ($data['reservation']['room_type_slug'] ?? null),
+            'selected_unit' => $data['selected_unit'] ?? ($data['reservation']['unit_type_slug'] ?? null),
             ...array_key_exists('reservation', $data) ? ['reservation' => array_filter($data['reservation'] ?? [], fn ($value) => $value !== null && $value !== '')] : [],
         ]);
 
         try {
-            $assistantMessage = $this->concierge->reply($hotel, $conversation, $data['message']);
+            $assistantMessage = $this->concierge->reply($apartment, $conversation, $data['message']);
         } catch (\Throwable $e) {
-            Log::error('Concierge reply failed', ['hotel_id' => $hotel->id, 'error' => $e->getMessage()]);
+            Log::error('Concierge reply failed', ['apartment_id' => $apartment->id, 'error' => $e->getMessage()]);
 
             return response()->json([
                 'error' => 'concierge_unavailable',
@@ -79,13 +79,13 @@ class ConciergeChatController extends Controller
         ]);
     }
 
-    public function history(Request $request, string $hotelSlug): JsonResponse
+    public function history(Request $request, string $apartmentSlug): JsonResponse
     {
-        $hotel = $this->publishedHotel($hotelSlug);
+        $apartment = $this->publishedApartment($apartmentSlug);
 
         $data = $request->validate(['guest_token' => ['required', 'uuid']]);
 
-        $conversation = $this->findConversation($hotel, $data['guest_token']);
+        $conversation = $this->findConversation($apartment, $data['guest_token']);
 
         $messages = $conversation->messages()
             ->whereIn('role', [ConversationMessage::ROLE_GUEST, ConversationMessage::ROLE_ASSISTANT, ConversationMessage::ROLE_SYSTEM])
@@ -100,18 +100,18 @@ class ConciergeChatController extends Controller
         ]);
     }
 
-    private function publishedHotel(string $hotelSlug): Hotel
+    private function publishedApartment(string $apartmentSlug): Apartment
     {
-        $hotel = Hotel::where('slug', $hotelSlug)->first();
+        $apartment = Apartment::where('slug', $apartmentSlug)->first();
 
-        abort_if(! $hotel || ! $hotel->isPublished(), 404);
+        abort_if(! $apartment || ! $apartment->isPublished(), 404);
 
-        return $hotel;
+        return $apartment;
     }
 
-    private function findConversation(Hotel $hotel, string $guestToken): Conversation
+    private function findConversation(Apartment $apartment, string $guestToken): Conversation
     {
-        $conversation = Conversation::where('hotel_id', $hotel->id)
+        $conversation = Conversation::where('apartment_id', $apartment->id)
             ->where('guest_token', $guestToken)
             ->first();
 
@@ -140,7 +140,7 @@ class ConciergeChatController extends Controller
      * the guest can step into the matching scene instead of typing again.
      *
      * @param  list<array<string, mixed>>|null  $uiPayload
-     * @return list<array{action: string, room?: string}>
+     * @return list<array{action: string, unit?: string}>
      */
     private function suggestedActions(?array $uiPayload): array
     {
@@ -148,18 +148,18 @@ class ConciergeChatController extends Controller
 
         foreach ($uiPayload ?? [] as $payload) {
             $type = $payload['type'] ?? null;
-            $room = $payload['room']['room_type_slug'] ?? $payload['quote']['room_type_slug'] ?? null;
+            $unit = $payload['unit']['unit_type_slug'] ?? $payload['quote']['unit_type_slug'] ?? null;
 
-            if ($type === 'room_detail' && $room) {
-                $actions[] = ['action' => 'view_room', 'room' => $room];
-                $actions[] = ['action' => 'reserve', 'room' => $room];
-            } elseif ($type === 'availability' && ($payload['available'] ?? false) && $room) {
-                $actions[] = ['action' => 'reserve', 'room' => $room];
+            if ($type === 'unit_detail' && $unit) {
+                $actions[] = ['action' => 'view_unit', 'unit' => $unit];
+                $actions[] = ['action' => 'reserve', 'unit' => $unit];
+            } elseif ($type === 'availability' && ($payload['available'] ?? false) && $unit) {
+                $actions[] = ['action' => 'reserve', 'unit' => $unit];
             } elseif ($type === 'handover') {
                 $actions[] = ['action' => 'staff'];
             }
         }
 
-        return collect($actions)->unique(fn (array $action) => $action['action'].($action['room'] ?? ''))->values()->all();
+        return collect($actions)->unique(fn (array $action) => $action['action'].($action['unit'] ?? ''))->values()->all();
     }
 }

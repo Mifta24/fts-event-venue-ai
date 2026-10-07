@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Apartment;
 use App\Models\Conversation;
-use App\Models\Hotel;
-use App\Models\RoomType;
+use App\Models\UnitType;
 use App\Services\Reservation\ReservationHandover;
 use App\Services\Reservation\ReservationService;
 use Carbon\CarbonImmutable;
@@ -29,10 +29,10 @@ class ReservationController extends Controller
             'invalid' => 'Please check this field.',
             'check_in_past' => 'Check-in cannot be in the past.',
             'check_out_after' => 'Check-out must be after check-in.',
-            'too_long' => 'Stays are limited to :max nights. Please contact hotel staff for longer stays.',
-            'room_unknown' => 'Please choose a room.',
-            'capacity' => 'This room does not fit that many guests. Choose another room or add rooms.',
-            'unavailable' => 'This room is not available for those dates.',
+            'too_long' => 'Online requests cover up to :max nights. For a longer lease, please contact our leasing team.',
+            'unit_unknown' => 'Please choose a unit type.',
+            'capacity' => 'This unit does not fit that many residents. Choose a larger unit or add another unit.',
+            'unavailable' => 'This unit type is not available for those dates.',
             'contact_email' => 'Please enter a valid email address.',
             'contact_phone' => 'Please enter a valid phone or WhatsApp number.',
         ],
@@ -40,21 +40,21 @@ class ReservationController extends Controller
             'invalid' => 'Mohon periksa kolom ini.',
             'check_in_past' => 'Tanggal check-in tidak boleh di masa lalu.',
             'check_out_after' => 'Tanggal check-out harus setelah check-in.',
-            'too_long' => 'Lama menginap dibatasi :max malam. Hubungi staf hotel untuk menginap lebih lama.',
-            'room_unknown' => 'Silakan pilih kamar.',
-            'capacity' => 'Kamar ini tidak cukup untuk jumlah tamu tersebut. Pilih kamar lain atau tambah kamar.',
-            'unavailable' => 'Kamar ini tidak tersedia pada tanggal tersebut.',
+            'too_long' => 'Permintaan online maksimal :max malam. Untuk sewa lebih lama, hubungi tim leasing kami.',
+            'unit_unknown' => 'Silakan pilih tipe unit.',
+            'capacity' => 'Unit ini tidak cukup untuk jumlah penghuni tersebut. Pilih unit yang lebih besar atau tambah unit.',
+            'unavailable' => 'Tipe unit ini tidak tersedia pada tanggal tersebut.',
             'contact_email' => 'Masukkan alamat email yang valid.',
             'contact_phone' => 'Masukkan nomor telepon atau WhatsApp yang valid.',
         ],
         'ja' => [
             'invalid' => 'この項目をご確認ください。',
-            'check_in_past' => 'チェックイン日は過去にできません。',
-            'check_out_after' => 'チェックアウト日はチェックインより後にしてください。',
-            'too_long' => 'ご宿泊は最大:max泊までです。それ以上はスタッフにご相談ください。',
-            'room_unknown' => '客室を選択してください。',
-            'capacity' => 'この客室では人数に対応できません。別の客室を選ぶか、客室数を増やしてください。',
-            'unavailable' => 'この日程では、この客室はご利用いただけません。',
+            'check_in_past' => '入居日は過去にできません。',
+            'check_out_after' => '退去日は入居日より後にしてください。',
+            'too_long' => 'オンラインでのご依頼は最大:max泊までです。それ以上の長期契約はリーシングチームにご相談ください。',
+            'unit_unknown' => 'お部屋タイプを選択してください。',
+            'capacity' => 'このお部屋では人数に対応できません。広いお部屋を選ぶか、戸数を増やしてください。',
+            'unavailable' => 'この日程では、このお部屋タイプはご利用いただけません。',
             'contact_email' => '有効なメールアドレスを入力してください。',
             'contact_phone' => '有効な電話番号またはWhatsApp番号を入力してください。',
         ],
@@ -65,38 +65,41 @@ class ReservationController extends Controller
         private readonly ReservationHandover $handover,
     ) {}
 
-    public function quote(Request $request, string $hotelSlug): JsonResponse
+    public function quote(Request $request, string $apartmentSlug): JsonResponse
     {
-        $hotel = $this->publishedHotel($hotelSlug);
-        $locale = $this->locale($request, $hotel);
+        $apartment = $this->publishedApartment($apartmentSlug);
+        $locale = $this->locale($request, $apartment);
 
-        $data = $request->validate($this->stayRules($hotel), $this->validationMessages($locale));
-        [$roomType, $checkIn, $checkOut, $rooms, $extraBed] = $this->resolveStay($hotel, $data, $locale);
+        $data = $request->validate($this->stayRules($apartment), $this->validationMessages($locale));
+        [$unitType, $checkIn, $checkOut, $units, $extraBed] = $this->resolveStay($apartment, $data, $locale);
 
-        $quote = $this->reservations->quote($roomType, $checkIn, $checkOut, $rooms, $extraBed);
+        $quote = $this->reservations->quote($unitType, $checkIn, $checkOut, $units, $extraBed);
 
         if (! $quote) {
-            return $this->unavailable($hotel, $roomType, $data, $locale);
+            return $this->unavailable($apartment, $unitType, $data, $locale);
         }
 
         return response()->json([
             'available' => true,
             'nights' => $quote['nights'],
-            'room_total' => $quote['room_total'],
+            'unit_total' => $quote['unit_total'],
             'extra_bed_total' => $quote['extra_bed_total'],
+            'subtotal' => $quote['subtotal'],
+            'discount_percent' => $quote['discount_percent'],
+            'discount_total' => $quote['discount_total'],
             'grand_total' => $quote['grand_total'],
-            'currency' => $hotel->currency,
+            'currency' => $apartment->currency,
         ]);
     }
 
-    public function store(Request $request, string $hotelSlug): JsonResponse
+    public function store(Request $request, string $apartmentSlug): JsonResponse
     {
-        $hotel = $this->publishedHotel($hotelSlug);
-        $locale = $this->locale($request, $hotel);
+        $apartment = $this->publishedApartment($apartmentSlug);
+        $locale = $this->locale($request, $apartment);
         $messages = self::MESSAGES[$locale];
 
         $data = $request->validate([
-            ...$this->stayRules($hotel),
+            ...$this->stayRules($apartment),
             'guest_name' => ['required', 'string', 'max:100'],
             'contact_type' => ['required', Rule::in(['whatsapp', 'phone', 'email'])],
             'contact_value' => ['required', 'string', 'max:120'],
@@ -114,18 +117,18 @@ class ReservationController extends Controller
             throw ValidationException::withMessages(['contact_value' => $messages['contact_phone']]);
         }
 
-        [$roomType, $checkIn, $checkOut, $rooms, $extraBed] = $this->resolveStay($hotel, $data, $locale);
+        [$unitType, $checkIn, $checkOut, $units, $extraBed] = $this->resolveStay($apartment, $data, $locale);
 
         $conversation = isset($data['guest_token'])
-            ? Conversation::where('hotel_id', $hotel->id)->where('guest_token', $data['guest_token'])->first()
+            ? Conversation::where('apartment_id', $apartment->id)->where('guest_token', $data['guest_token'])->first()
             : null;
 
-        $booking = $this->reservations->createRequest($hotel, $roomType, [
+        $booking = $this->reservations->createRequest($apartment, $unitType, [
             'check_in' => $checkIn,
             'check_out' => $checkOut,
             'adults' => (int) $data['adults'],
             'children' => (int) ($data['children'] ?? 0),
-            'rooms' => $rooms,
+            'units' => $units,
             'extra_bed' => $extraBed,
             'guest_name' => $data['guest_name'],
             'guest_email' => $isEmail ? $data['contact_value'] : null,
@@ -135,32 +138,32 @@ class ReservationController extends Controller
         ], $conversation);
 
         if (! $booking) {
-            return $this->unavailable($hotel, $roomType, $data, $locale);
+            return $this->unavailable($apartment, $unitType, $data, $locale);
         }
 
         return response()->json([
             'reference' => $booking->reference,
             'status' => $booking->status,
             'total' => (float) $booking->total_price,
-            'currency' => $hotel->currency,
-            'handover' => $this->handover->forBooking($hotel, $booking, $locale),
+            'currency' => $apartment->currency,
+            'handover' => $this->handover->forBooking($apartment, $booking, $locale),
         ], 201);
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function stayRules(Hotel $hotel): array
+    private function stayRules(Apartment $apartment): array
     {
-        $today = now($hotel->timezone)->toDateString();
+        $today = now($apartment->timezone)->toDateString();
 
         return [
-            'room_type_slug' => ['required', 'string', 'max:120'],
+            'unit_type_slug' => ['required', 'string', 'max:120'],
             'check_in' => ['required', 'date_format:Y-m-d', 'after_or_equal:'.$today],
             'check_out' => ['required', 'date_format:Y-m-d', 'after:check_in'],
             'adults' => ['required', 'integer', 'min:1', 'max:20'],
             'children' => ['nullable', 'integer', 'min:0', 'max:10'],
-            'rooms' => ['required', 'integer', 'min:1', 'max:10'],
+            'units' => ['required', 'integer', 'min:1', 'max:10'],
             'extra_bed' => ['nullable', 'boolean'],
             'locale' => ['nullable', Rule::in(self::SUPPORTED_LOCALES)],
         ];
@@ -189,16 +192,16 @@ class ReservationController extends Controller
 
     /**
      * @param  array<string, mixed>  $data
-     * @return array{0: RoomType, 1: CarbonImmutable, 2: CarbonImmutable, 3: int, 4: bool}
+     * @return array{0: UnitType, 1: CarbonImmutable, 2: CarbonImmutable, 3: int, 4: bool}
      */
-    private function resolveStay(Hotel $hotel, array $data, string $locale): array
+    private function resolveStay(Apartment $apartment, array $data, string $locale): array
     {
         $messages = self::MESSAGES[$locale];
 
-        $roomType = $hotel->roomTypes()->where('is_active', true)->where('slug', $data['room_type_slug'])->first();
+        $unitType = $apartment->unitTypes()->where('is_active', true)->where('slug', $data['unit_type_slug'])->first();
 
-        if (! $roomType) {
-            throw ValidationException::withMessages(['room_type_slug' => $messages['room_unknown']]);
+        if (! $unitType) {
+            throw ValidationException::withMessages(['unit_type_slug' => $messages['unit_unknown']]);
         }
 
         $checkIn = CarbonImmutable::parse($data['check_in'])->startOfDay();
@@ -210,41 +213,41 @@ class ReservationController extends Controller
             ]);
         }
 
-        $rooms = (int) $data['rooms'];
+        $units = (int) $data['units'];
 
-        if (! $this->reservations->fitsOccupancy($roomType, (int) $data['adults'], (int) ($data['children'] ?? 0), $rooms)) {
+        if (! $this->reservations->fitsOccupancy($unitType, (int) $data['adults'], (int) ($data['children'] ?? 0), $units)) {
             throw ValidationException::withMessages(['adults' => $messages['capacity']]);
         }
 
-        return [$roomType, $checkIn, $checkOut, $rooms, (bool) ($data['extra_bed'] ?? false)];
+        return [$unitType, $checkIn, $checkOut, $units, (bool) ($data['extra_bed'] ?? false)];
     }
 
     /**
-     * The room cannot be booked for those nights: say so, and offer the room
+     * The unit cannot be booked for those nights: say so, and offer the unit
      * types that can host the same party on the same dates.
      *
      * @param  array<string, mixed>  $data
      */
-    private function unavailable(Hotel $hotel, RoomType $requested, array $data, string $locale): JsonResponse
+    private function unavailable(Apartment $apartment, UnitType $requested, array $data, string $locale): JsonResponse
     {
         $checkIn = CarbonImmutable::parse($data['check_in'])->startOfDay();
         $checkOut = CarbonImmutable::parse($data['check_out'])->startOfDay();
-        $rooms = (int) $data['rooms'];
+        $units = (int) $data['units'];
         $adults = (int) $data['adults'];
         $children = (int) ($data['children'] ?? 0);
 
-        $alternatives = $hotel->roomTypes()
+        $alternatives = $apartment->unitTypes()
             ->where('is_active', true)
             ->whereKeyNot($requested->id)
             ->orderBy('sort_order')
             ->get()
-            ->filter(fn (RoomType $roomType) => $this->reservations->fitsOccupancy($roomType, $adults, $children, $rooms))
-            ->map(function (RoomType $roomType) use ($checkIn, $checkOut, $rooms, $locale) {
-                $quote = $this->reservations->quote($roomType, $checkIn, $checkOut, $rooms);
+            ->filter(fn (UnitType $unitType) => $this->reservations->fitsOccupancy($unitType, $adults, $children, $units))
+            ->map(function (UnitType $unitType) use ($checkIn, $checkOut, $units, $locale) {
+                $quote = $this->reservations->quote($unitType, $checkIn, $checkOut, $units);
 
                 return $quote ? [
-                    'slug' => $roomType->slug,
-                    'name' => $roomType->translatedName($locale),
+                    'slug' => $unitType->slug,
+                    'name' => $unitType->translatedName($locale),
                     'total' => $quote['grand_total'],
                 ] : null;
             })
@@ -255,25 +258,25 @@ class ReservationController extends Controller
 
         return response()->json([
             'message' => $message,
-            'errors' => ['room_type_slug' => [$message]],
+            'errors' => ['unit_type_slug' => [$message]],
             'alternatives' => $alternatives,
-            'currency' => $hotel->currency,
+            'currency' => $apartment->currency,
         ], 422);
     }
 
-    private function locale(Request $request, Hotel $hotel): string
+    private function locale(Request $request, Apartment $apartment): string
     {
         return in_array($request->input('locale'), self::SUPPORTED_LOCALES, true)
             ? $request->input('locale')
-            : $hotel->default_locale;
+            : $apartment->default_locale;
     }
 
-    private function publishedHotel(string $hotelSlug): Hotel
+    private function publishedApartment(string $apartmentSlug): Apartment
     {
-        $hotel = Hotel::where('slug', $hotelSlug)->first();
+        $apartment = Apartment::where('slug', $apartmentSlug)->first();
 
-        abort_if(! $hotel || ! $hotel->isPublished(), 404);
+        abort_if(! $apartment || ! $apartment->isPublished(), 404);
 
-        return $hotel;
+        return $apartment;
     }
 }

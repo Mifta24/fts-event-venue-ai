@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'reference',
-    'hotel_id',
-    'room_type_id',
+    'apartment_id',
+    'unit_type_id',
     'conversation_id',
     'guest_name',
     'guest_email',
@@ -19,7 +19,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'check_out',
     'adults',
     'children',
-    'room_count',
+    'unit_count',
     'extra_bed',
     'total_price',
     'status',
@@ -43,14 +43,14 @@ class Booking extends Model
         ];
     }
 
-    public function hotel(): BelongsTo
+    public function apartment(): BelongsTo
     {
-        return $this->belongsTo(Hotel::class);
+        return $this->belongsTo(Apartment::class);
     }
 
-    public function roomType(): BelongsTo
+    public function unitType(): BelongsTo
     {
-        return $this->belongsTo(RoomType::class);
+        return $this->belongsTo(UnitType::class);
     }
 
     public function conversation(): BelongsTo

@@ -14,7 +14,7 @@
                 <tr>
                     <th class="px-4 py-3">Reference</th>
                     <th class="px-4 py-3">Guest</th>
-                    <th class="px-4 py-3">Room</th>
+                    <th class="px-4 py-3">Unit</th>
                     <th class="px-4 py-3">Dates</th>
                     <th class="px-4 py-3">Total</th>
                     <th class="px-4 py-3">Status</th>
@@ -30,9 +30,9 @@
                             <p class="text-xs text-stone-500">{{ $booking->contact_type ? ucfirst($booking->contact_type).': ' : '' }}{{ $booking->guest_phone ?? $booking->guest_email }}</p>
                             @if ($booking->notes)<p class="mt-1 max-w-xs text-xs italic text-stone-400">{{ $booking->notes }}</p>@endif
                         </td>
-                        <td class="px-4 py-3">{{ $booking->room_count }} × {{ $booking->roomType->name }}<p class="text-xs text-stone-400">{{ $booking->adults }} adults{{ $booking->children ? ', '.$booking->children.' children' : '' }}</p></td>
+                        <td class="px-4 py-3">{{ $booking->unit_count }} × {{ $booking->unitType->name }}<p class="text-xs text-stone-400">{{ $booking->adults }} adults{{ $booking->children ? ', '.$booking->children.' children' : '' }}</p></td>
                         <td class="px-4 py-3 text-xs text-stone-500">{{ $booking->check_in->toFormattedDateString() }} → {{ $booking->check_out->toFormattedDateString() }}</td>
-                        <td class="px-4 py-3">{{ $hotel->currency }} {{ number_format((float) $booking->total_price, 0, ',', '.') }}</td>
+                        <td class="px-4 py-3">{{ $apartment->currency }} {{ number_format((float) $booking->total_price, 0, ',', '.') }}</td>
                         <td class="px-4 py-3">
                             <span @class([
                                 'rounded-full px-2 py-0.5 text-xs',

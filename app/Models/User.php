@@ -31,16 +31,16 @@ class User extends Authenticatable
         ];
     }
 
-    public function hotels(): BelongsToMany
+    public function apartments(): BelongsToMany
     {
-        return $this->belongsToMany(Hotel::class, 'hotel_users')
-            ->using(HotelUser::class)
+        return $this->belongsToMany(Apartment::class, 'apartment_users')
+            ->using(ApartmentUser::class)
             ->withPivot(['role', 'status'])
             ->withTimestamps();
     }
 
-    public function currentHotel(): ?Hotel
+    public function currentApartment(): ?Apartment
     {
-        return $this->hotels()->wherePivot('status', 'active')->first();
+        return $this->apartments()->wherePivot('status', 'active')->first();
     }
 }

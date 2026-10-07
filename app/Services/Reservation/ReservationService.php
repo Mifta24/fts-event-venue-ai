@@ -2,11 +2,11 @@
 
 namespace App\Services\Reservation;
 
+use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\Conversation;
-use App\Models\Hotel;
-use App\Models\RoomInventory;
-use App\Models\RoomType;
+use App\Models\UnitInventory;
+use App\Models\UnitType;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
@@ -17,29 +17,31 @@ use Illuminate\Support\Facades\DB;
  */
 class ReservationService
 {
-    public const MAX_NIGHTS = 30;
+    /** Apartments take long stays, so a request may cover up to about three months. */
+    public const MAX_NIGHTS = 90;
 
     /**
-     * Whether the requested party fits the room type across the requested rooms.
+     * Whether the requested party fits the unit type across the requested units.
      */
-    public function fitsOccupancy(RoomType $roomType, int $adults, int $children, int $rooms): bool
+    public function fitsOccupancy(UnitType $unitType, int $adults, int $children, int $units): bool
     {
-        return $adults <= $roomType->max_adults * $rooms
-            && ($adults + $children) <= $roomType->maxOccupancy() * $rooms;
+        return $adults <= $unitType->max_adults * $units
+            && ($adults + $children) <= $unitType->maxOccupancy() * $units;
     }
 
     /**
-     * Prices a stay across every night in range. Returns null if any night
-     * lacks enough free units — this is the one place price and availability
-     * truth comes from, never the model.
+     * Prices a stay across every night in range, then takes off the
+     * apartment's weekly or monthly long-stay discount. Returns null if any
+     * night lacks enough free units — this is the one place price and
+     * availability truth comes from, never the model.
      *
-     * @return array{nights: int, nightly: list<array{date: string, price: float}>, room_total: float, extra_bed_total: float, grand_total: float, min_available_units: int}|null
+     * @return array{nights: int, nightly: list<array{date: string, price: float}>, unit_total: float, extra_bed_total: float, subtotal: float, discount_percent: int, discount_total: float, grand_total: float, min_available_units: int}|null
      */
     public function quote(
-        RoomType $roomType,
+        UnitType $unitType,
         CarbonImmutable $checkIn,
         CarbonImmutable $checkOut,
-        int $rooms = 1,
+        int $units = 1,
         bool $extraBed = false,
         bool $lockForUpdate = false,
     ): ?array {
@@ -49,7 +51,7 @@ class ReservationService
             return null;
         }
 
-        $query = RoomInventory::where('room_type_id', $roomType->id)
+        $query = UnitInventory::where('unit_type_id', $unitType->id)
             ->whereDate('stay_date', '>=', $checkIn->toDateString())
             ->whereDate('stay_date', '<=', $checkOut->subDay()->toDateString())
             ->orderBy('stay_date');
@@ -65,47 +67,54 @@ class ReservationService
         }
 
         $nightly = [];
-        $perRoomTotal = 0.0;
+        $perUnitTotal = 0.0;
         $minAvailable = PHP_INT_MAX;
 
         foreach ($inventory as $night) {
-            if ($night->availableUnits() < $rooms) {
+            if ($night->availableUnits() < $units) {
                 return null;
             }
 
             $nightly[] = ['date' => $night->stay_date->toDateString(), 'price' => (float) $night->price];
-            $perRoomTotal += (float) $night->price;
+            $perUnitTotal += (float) $night->price;
             $minAvailable = min($minAvailable, $night->availableUnits());
         }
 
-        $roomTotal = $perRoomTotal * $rooms;
-        $extraBedTotal = $extraBed && $roomType->extra_bed_available
-            ? (float) $roomType->extra_bed_price * $nights * $rooms
+        $unitTotal = $perUnitTotal * $units;
+        $extraBedTotal = $extraBed && $unitType->extra_bed_available
+            ? (float) $unitType->extra_bed_price * $nights * $units
             : 0.0;
+
+        $subtotal = $unitTotal + $extraBedTotal;
+        $discountPercent = $unitType->apartment->longStayDiscountPercent($nights);
+        $discountTotal = round($subtotal * $discountPercent / 100, 2);
 
         return [
             'nights' => $nights,
             'nightly' => $nightly,
-            'room_total' => $roomTotal,
+            'unit_total' => $unitTotal,
             'extra_bed_total' => $extraBedTotal,
-            'grand_total' => $roomTotal + $extraBedTotal,
+            'subtotal' => $subtotal,
+            'discount_percent' => $discountPercent,
+            'discount_total' => $discountTotal,
+            'grand_total' => $subtotal - $discountTotal,
             'min_available_units' => $minAvailable,
         ];
     }
 
     /**
      * Creates a pending reservation request and holds the inventory for it.
-     * Returns null when the room is no longer available for those nights.
+     * Returns null when the unit is no longer available for those nights.
      *
-     * @param  array{check_in: CarbonImmutable, check_out: CarbonImmutable, adults: int, children?: int, rooms?: int, extra_bed?: bool, guest_name: string, guest_email?: ?string, guest_phone?: ?string, contact_type?: ?string, notes?: ?string}  $data
+     * @param  array{check_in: CarbonImmutable, check_out: CarbonImmutable, adults: int, children?: int, units?: int, extra_bed?: bool, guest_name: string, guest_email?: ?string, guest_phone?: ?string, contact_type?: ?string, notes?: ?string}  $data
      */
-    public function createRequest(Hotel $hotel, RoomType $roomType, array $data, ?Conversation $conversation = null): ?Booking
+    public function createRequest(Apartment $apartment, UnitType $unitType, array $data, ?Conversation $conversation = null): ?Booking
     {
-        $rooms = $data['rooms'] ?? 1;
+        $units = $data['units'] ?? 1;
         $extraBed = (bool) ($data['extra_bed'] ?? false);
 
-        return DB::transaction(function () use ($hotel, $roomType, $data, $conversation, $rooms, $extraBed) {
-            $quote = $this->quote($roomType, $data['check_in'], $data['check_out'], $rooms, $extraBed, lockForUpdate: true);
+        return DB::transaction(function () use ($apartment, $unitType, $data, $conversation, $units, $extraBed) {
+            $quote = $this->quote($unitType, $data['check_in'], $data['check_out'], $units, $extraBed, lockForUpdate: true);
 
             if (! $quote) {
                 return null;
@@ -113,8 +122,8 @@ class ReservationService
 
             $booking = Booking::create([
                 'reference' => Booking::generateReference(),
-                'hotel_id' => $hotel->id,
-                'room_type_id' => $roomType->id,
+                'apartment_id' => $apartment->id,
+                'unit_type_id' => $unitType->id,
                 'conversation_id' => $conversation?->id,
                 'guest_name' => $data['guest_name'],
                 'guest_email' => $data['guest_email'] ?? null,
@@ -124,8 +133,8 @@ class ReservationService
                 'check_out' => $data['check_out']->toDateString(),
                 'adults' => $data['adults'],
                 'children' => $data['children'] ?? 0,
-                'room_count' => $rooms,
-                'extra_bed' => $extraBed && $roomType->extra_bed_available,
+                'unit_count' => $units,
+                'extra_bed' => $extraBed && $unitType->extra_bed_available,
                 'total_price' => $quote['grand_total'],
                 'status' => Booking::STATUS_PENDING,
                 'notes' => $data['notes'] ?? null,
@@ -147,9 +156,9 @@ class ReservationService
 
     private function adjustInventory(Booking $booking, int $direction): void
     {
-        RoomInventory::where('room_type_id', $booking->room_type_id)
+        UnitInventory::where('unit_type_id', $booking->unit_type_id)
             ->whereDate('stay_date', '>=', $booking->check_in->toDateString())
             ->whereDate('stay_date', '<=', $booking->check_out->copy()->subDay()->toDateString())
-            ->{$direction > 0 ? 'increment' : 'decrement'}('booked_units', $booking->room_count);
+            ->{$direction > 0 ? 'increment' : 'decrement'}('booked_units', $booking->unit_count);
     }
 }

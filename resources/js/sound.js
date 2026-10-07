@@ -4,7 +4,7 @@
  * tick when sending. Sound only ever follows a guest action, never plays on
  * its own, and can be muted with the header toggle (remembered per browser).
  */
-const STORAGE_KEY = 'hotel_sound';
+const STORAGE_KEY = 'apartment_sound';
 
 let context = null;
 let master = null;
@@ -105,6 +105,6 @@ function initSoundToggle() {
     });
 }
 
-window.hotelSound = { play, isEnabled };
+window.apartmentSound = { play, isEnabled };
 
 document.addEventListener('DOMContentLoaded', initSoundToggle);

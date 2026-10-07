@@ -2,72 +2,72 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Concerns\ResolvesCurrentHotel;
+use App\Http\Controllers\Concerns\ResolvesCurrentApartment;
 use App\Http\Controllers\Controller;
-use App\Models\HotelKnowledgeItem;
+use App\Models\ApartmentKnowledgeItem;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class KnowledgeItemController extends Controller
 {
-    use ResolvesCurrentHotel;
+    use ResolvesCurrentApartment;
 
     public function index(Request $request): View
     {
-        $hotel = $this->currentHotel($request);
+        $apartment = $this->currentApartment($request);
 
-        $items = $hotel->knowledgeItems()->orderBy('category')->orderBy('sort_order')->get();
+        $items = $apartment->knowledgeItems()->orderBy('category')->orderBy('sort_order')->get();
 
-        return view('admin.knowledge-items.index', compact('hotel', 'items'));
+        return view('admin.knowledge-items.index', compact('apartment', 'items'));
     }
 
     public function create(Request $request): View
     {
-        $hotel = $this->currentHotel($request);
+        $apartment = $this->currentApartment($request);
 
         return view('admin.knowledge-items.form', [
-            'hotel' => $hotel,
-            'item' => new HotelKnowledgeItem(['category' => HotelKnowledgeItem::CATEGORY_GENERAL, 'is_active' => true]),
+            'apartment' => $apartment,
+            'item' => new ApartmentKnowledgeItem(['category' => ApartmentKnowledgeItem::CATEGORY_GENERAL, 'is_active' => true]),
             'categories' => $this->categories(),
         ]);
     }
 
     public function store(Request $request): RedirectResponse
     {
-        $hotel = $this->currentHotel($request);
+        $apartment = $this->currentApartment($request);
 
-        $item = $hotel->knowledgeItems()->create($this->validated($request));
+        $item = $apartment->knowledgeItems()->create($this->validated($request));
 
         return redirect()->route('admin.knowledge-items.index')->with('status', "Knowledge item \"{$item->title}\" created.");
     }
 
-    public function edit(Request $request, HotelKnowledgeItem $knowledgeItem): View
+    public function edit(Request $request, ApartmentKnowledgeItem $knowledgeItem): View
     {
-        $hotel = $this->currentHotel($request);
-        abort_if($knowledgeItem->hotel_id !== $hotel->id, 404);
+        $apartment = $this->currentApartment($request);
+        abort_if($knowledgeItem->apartment_id !== $apartment->id, 404);
 
         return view('admin.knowledge-items.form', [
-            'hotel' => $hotel,
+            'apartment' => $apartment,
             'item' => $knowledgeItem,
             'categories' => $this->categories(),
         ]);
     }
 
-    public function update(Request $request, HotelKnowledgeItem $knowledgeItem): RedirectResponse
+    public function update(Request $request, ApartmentKnowledgeItem $knowledgeItem): RedirectResponse
     {
-        $hotel = $this->currentHotel($request);
-        abort_if($knowledgeItem->hotel_id !== $hotel->id, 404);
+        $apartment = $this->currentApartment($request);
+        abort_if($knowledgeItem->apartment_id !== $apartment->id, 404);
 
         $knowledgeItem->update($this->validated($request));
 
         return redirect()->route('admin.knowledge-items.index')->with('status', "Knowledge item \"{$knowledgeItem->title}\" updated.");
     }
 
-    public function destroy(Request $request, HotelKnowledgeItem $knowledgeItem): RedirectResponse
+    public function destroy(Request $request, ApartmentKnowledgeItem $knowledgeItem): RedirectResponse
     {
-        $hotel = $this->currentHotel($request);
-        abort_if($knowledgeItem->hotel_id !== $hotel->id, 404);
+        $apartment = $this->currentApartment($request);
+        abort_if($knowledgeItem->apartment_id !== $apartment->id, 404);
 
         $knowledgeItem->delete();
 
@@ -108,12 +108,12 @@ class KnowledgeItemController extends Controller
     private function categories(): array
     {
         return [
-            HotelKnowledgeItem::CATEGORY_GENERAL,
-            HotelKnowledgeItem::CATEGORY_FACILITIES,
-            HotelKnowledgeItem::CATEGORY_POLICIES,
-            HotelKnowledgeItem::CATEGORY_DINING,
-            HotelKnowledgeItem::CATEGORY_TRANSPORT,
-            HotelKnowledgeItem::CATEGORY_FAQ,
+            ApartmentKnowledgeItem::CATEGORY_GENERAL,
+            ApartmentKnowledgeItem::CATEGORY_FACILITIES,
+            ApartmentKnowledgeItem::CATEGORY_POLICIES,
+            ApartmentKnowledgeItem::CATEGORY_DINING,
+            ApartmentKnowledgeItem::CATEGORY_TRANSPORT,
+            ApartmentKnowledgeItem::CATEGORY_FAQ,
         ];
     }
 }

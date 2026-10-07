@@ -1,8 +1,8 @@
 <x-admin-layout title="Dashboard">
     <div class="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div class="rounded-xl border border-stone-200 bg-white p-4">
-            <p class="text-2xl font-semibold text-stone-900">{{ $stats['room_types'] }}</p>
-            <p class="text-xs text-stone-500">Room types</p>
+            <p class="text-2xl font-semibold text-stone-900">{{ $stats['unit_types'] }}</p>
+            <p class="text-xs text-stone-500">Unit types</p>
         </div>
         <div class="rounded-xl border border-stone-200 bg-white p-4">
             <p class="text-2xl font-semibold text-stone-900">{{ $stats['knowledge_items'] }}</p>
@@ -44,7 +44,7 @@
             <div class="divide-y divide-stone-100">
                 @forelse ($recentBookings as $booking)
                     <div class="px-4 py-3">
-                        <p class="text-sm font-medium text-stone-900">{{ $booking->guest_name }} — {{ $booking->roomType->name }}</p>
+                        <p class="text-sm font-medium text-stone-900">{{ $booking->guest_name }} — {{ $booking->unitType->name }}</p>
                         <p class="mt-0.5 text-xs text-stone-500">{{ $booking->check_in->toFormattedDateString() }} → {{ $booking->check_out->toFormattedDateString() }} · {{ ucfirst($booking->status) }}</p>
                     </div>
                 @empty

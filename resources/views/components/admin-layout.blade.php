@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Admin' }} — {{ auth()->user()?->currentHotel()?->name ?? config('app.name') }}</title>
+    <title>{{ $title ?? 'Admin' }} — {{ auth()->user()?->currentApartment()?->name ?? config('app.name') }}</title>
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -13,14 +13,14 @@
     <div class="flex min-h-screen">
         <aside class="w-56 shrink-0 border-r border-stone-200 bg-white">
             <div class="border-b border-stone-200 px-4 py-4">
-                <p class="text-sm font-semibold text-stone-900">{{ auth()->user()?->currentHotel()?->name }}</p>
+                <p class="text-sm font-semibold text-stone-900">{{ auth()->user()?->currentApartment()?->name }}</p>
                 <p class="text-xs text-stone-500">Admin Dashboard</p>
             </div>
             <nav class="space-y-1 px-2 py-4 text-sm">
                 @php
                     $navItems = [
                         ['route' => 'admin.dashboard', 'label' => 'Dashboard'],
-                        ['route' => 'admin.room-types.index', 'label' => 'Rooms'],
+                        ['route' => 'admin.unit-types.index', 'label' => 'Units'],
                         ['route' => 'admin.knowledge-items.index', 'label' => 'Knowledge base'],
                         ['route' => 'admin.bookings.index', 'label' => 'Bookings'],
                         ['route' => 'admin.handovers.index', 'label' => 'Handovers'],

@@ -22,6 +22,24 @@
         @case('wifi')
             <path d="M2.5 8.5a14 14 0 0 1 19 0M5.5 12a9.5 9.5 0 0 1 13 0M8.5 15.5a5 5 0 0 1 7 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/>
             @break
+        @case('laundry')
+            <rect x="4.5" y="3" width="15" height="18" rx="1.5"/><path d="M4.5 7.5h15M7.5 5.3h.01M10 5.3h.01"/><circle cx="12" cy="14" r="4"/><path d="M9.5 14.5c1-.8 2-.8 3 0s2 .8 2.5 0"/>
+            @break
+        @case('work')
+            <rect x="3" y="5" width="18" height="11" rx="1.2"/><path d="M8 20h8M12 16v4"/>
+            @break
+        @case('transit')
+            <rect x="5.5" y="3" width="13" height="14" rx="3"/><path d="M5.5 10h13M9 13.5h.01M15 13.5h.01M8 21l2-4M16 21l-2-4"/>
+            @break
+        @case('shop')
+            <path d="M4 8h16l-1.2 12H5.2L4 8Z"/><path d="M8.5 8V6.5a3.5 3.5 0 0 1 7 0V8"/>
+            @break
+        @case('security')
+            <path d="M12 3.5 19 6v5.5c0 4.6-3 8.2-7 9.3-4-1.1-7-4.7-7-9.3V6l7-2.5Z"/><path d="M12 9v3.5M12 15.5h.01"/>
+            @break
+        @case('housekeeping')
+            <path d="M14 3 9.5 13.5M7 13h7l1.5 8h-10L7 13Z"/><path d="M9 17h.01M12 17.5h.01"/>
+            @break
         @default
             <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18"/>
     @endswitch

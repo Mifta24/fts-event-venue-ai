@@ -2,56 +2,56 @@
 
 namespace App\Services\Reservation;
 
+use App\Models\Apartment;
 use App\Models\Booking;
-use App\Models\Hotel;
 
 /**
  * Builds the WhatsApp / phone / email hand-over links that carry a
- * reservation summary (or a plain "talk to staff" request) to the hotel team.
+ * reservation summary (or a plain "talk to staff" request) to the apartment team.
  */
 class ReservationHandover
 {
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    public function forBooking(Hotel $hotel, Booking $booking, string $locale): array
+    public function forBooking(Apartment $apartment, Booking $booking, string $locale): array
     {
         $message = $this->reservationMessage($booking, $locale);
 
-        return $this->links($hotel, $message, $this->subject('reservation', $locale).' '.$booking->reference);
+        return $this->links($apartment, $message, $this->subject('reservation', $locale).' '.$booking->reference);
     }
 
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    public function forStaff(Hotel $hotel, string $locale): array
+    public function forStaff(Apartment $apartment, string $locale): array
     {
-        return $this->links($hotel, $this->subject('staff_message', $locale), $this->subject('staff', $locale));
+        return $this->links($apartment, $this->subject('staff_message', $locale), $this->subject('staff', $locale));
     }
 
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    private function links(Hotel $hotel, string $message, string $subject): array
+    private function links(Apartment $apartment, string $message, string $subject): array
     {
-        $whatsapp = preg_replace('/\D+/', '', (string) $hotel->whatsapp);
-        $phone = preg_replace('/[^\d+]/', '', (string) $hotel->phone);
+        $whatsapp = preg_replace('/\D+/', '', (string) $apartment->whatsapp);
+        $phone = preg_replace('/[^\d+]/', '', (string) $apartment->phone);
 
         return [
             'whatsapp_url' => $whatsapp !== '' ? 'https://wa.me/'.$whatsapp.'?text='.rawurlencode($message) : null,
             'phone_url' => $phone !== '' ? 'tel:'.$phone : null,
-            'email_url' => filled($hotel->email) ? 'mailto:'.$hotel->email.'?subject='.rawurlencode($subject).'&body='.rawurlencode($message) : null,
+            'email_url' => filled($apartment->email) ? 'mailto:'.$apartment->email.'?subject='.rawurlencode($subject).'&body='.rawurlencode($message) : null,
         ];
     }
 
     private function reservationMessage(Booking $booking, string $locale): string
     {
-        $booking->loadMissing('roomType');
+        $booking->loadMissing('unitType');
 
         $labels = match ($locale) {
-            'en' => ['Hello, I would like to request a reservation.', 'Name', 'Check-in', 'Check-out', 'Guests', 'Rooms', 'Room Type', 'Special Request', 'Reference'],
-            'ja' => ['こんにちは。宿泊のご予約をリクエストしたいです。', 'お名前', 'チェックイン', 'チェックアウト', '人数', '客室数', '客室タイプ', 'ご要望', '予約番号'],
-            default => ['Halo, saya ingin mengajukan reservasi.', 'Nama', 'Check-in', 'Check-out', 'Tamu', 'Kamar', 'Tipe Kamar', 'Permintaan Khusus', 'Referensi'],
+            'en' => ['Hello, I would like to request a stay at the apartment.', 'Name', 'Move-in', 'Move-out', 'Residents', 'Units', 'Unit type', 'Special request', 'Reference'],
+            'ja' => ['こんにちは。アパートメントの滞在をリクエストしたいです。', 'お名前', '入居日', '退去日', '人数', '戸数', 'お部屋タイプ', 'ご要望', '予約番号'],
+            default => ['Halo, saya ingin mengajukan permintaan sewa unit apartemen.', 'Nama', 'Check-in', 'Check-out', 'Penghuni', 'Jumlah unit', 'Tipe unit', 'Permintaan khusus', 'Referensi'],
         };
 
         $guests = $booking->adults + $booking->children;
@@ -63,8 +63,8 @@ class ReservationHandover
             "{$labels[2]}: ".$booking->check_in->locale($locale)->translatedFormat('j F Y'),
             "{$labels[3]}: ".$booking->check_out->locale($locale)->translatedFormat('j F Y'),
             "{$labels[4]}: {$guests}",
-            "{$labels[5]}: {$booking->room_count}",
-            "{$labels[6]}: ".$booking->roomType->translatedName($locale),
+            "{$labels[5]}: {$booking->unit_count}",
+            "{$labels[6]}: ".$booking->unitType->translatedName($locale),
             "{$labels[7]}: ".($booking->notes ?: '-'),
             '',
             "{$labels[8]}: {$booking->reference}",
@@ -74,9 +74,9 @@ class ReservationHandover
     private function subject(string $key, string $locale): string
     {
         return [
-            'en' => ['reservation' => 'Reservation request', 'staff' => 'Question for hotel staff', 'staff_message' => 'Hello, I would like to speak with hotel staff.'],
-            'ja' => ['reservation' => '予約リクエスト', 'staff' => 'スタッフへのご相談', 'staff_message' => 'こんにちは。ホテルのスタッフとお話ししたいです。'],
-            'id' => ['reservation' => 'Permintaan reservasi', 'staff' => 'Pertanyaan untuk staf hotel', 'staff_message' => 'Halo, saya ingin bicara dengan staf hotel.'],
+            'en' => ['reservation' => 'Stay request', 'staff' => 'Question for the apartment team', 'staff_message' => 'Hello, I would like to speak with the apartment team.'],
+            'ja' => ['reservation' => '滞在リクエスト', 'staff' => 'スタッフへのご相談', 'staff_message' => 'こんにちは。アパートメントのスタッフとお話ししたいです。'],
+            'id' => ['reservation' => 'Permintaan sewa unit', 'staff' => 'Pertanyaan untuk tim apartemen', 'staff_message' => 'Halo, saya ingin bicara dengan tim apartemen.'],
         ][$locale][$key];
     }
 }
