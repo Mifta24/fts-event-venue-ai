@@ -1,53 +1,68 @@
+@php
+    $currentApartment = auth()->user()?->currentApartment();
+@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $title ?? 'Admin' }} — {{ auth()->user()?->currentApartment()?->name ?? config('app.name') }}</title>
+    <title>{{ $title ?? 'Admin' }} — {{ $currentApartment?->name ?? config('app.name') }}</title>
 
     @fonts
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-stone-50 text-stone-900 antialiased">
-    <div class="flex min-h-screen">
-        <aside class="w-56 shrink-0 border-r border-stone-200 bg-white">
-            <div class="border-b border-stone-200 px-4 py-4">
-                <p class="text-sm font-semibold text-stone-900">{{ auth()->user()?->currentApartment()?->name }}</p>
-                <p class="text-xs text-stone-500">Admin Dashboard</p>
+    <div class="min-h-screen lg:flex">
+        <header class="sticky top-0 z-20 bg-ink text-white lg:hidden">
+            <details class="group">
+                <summary class="flex cursor-pointer list-none items-center justify-between px-4 py-3 [&::-webkit-details-marker]:hidden">
+                    <span class="min-w-0">
+                        <span class="block truncate text-sm font-semibold">{{ $currentApartment?->name }}</span>
+                        <span class="block truncate font-mono text-[11px] uppercase tracking-[.14em] text-white/70">Admin · {{ $title ?? 'Dashboard' }}</span>
+                    </span>
+                    <span class="ml-3 grid size-10 shrink-0 place-items-center rounded border border-white/25 group-open:bg-white/10" aria-label="Menu">
+                        <svg class="size-5" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M3 5.5h14M3 10h14M3 14.5h14"/></svg>
+                    </span>
+                </summary>
+                <div class="border-t border-white/10"><x-admin-nav /></div>
+            </details>
+        </header>
+
+        <aside class="hidden w-56 shrink-0 flex-col bg-ink text-white lg:sticky lg:top-0 lg:flex lg:h-screen">
+            <div class="border-b border-white/10 px-4 py-4">
+                <p class="text-sm font-semibold">{{ $currentApartment?->name }}</p>
+                <p class="mt-0.5 font-mono text-[11px] uppercase tracking-[.14em] text-signal">Admin</p>
             </div>
-            <nav class="space-y-1 px-2 py-4 text-sm">
-                @php
-                    $navItems = [
-                        ['route' => 'admin.dashboard', 'label' => 'Dashboard'],
-                        ['route' => 'admin.unit-types.index', 'label' => 'Units'],
-                        ['route' => 'admin.knowledge-items.index', 'label' => 'Knowledge base'],
-                        ['route' => 'admin.bookings.index', 'label' => 'Bookings'],
-                        ['route' => 'admin.handovers.index', 'label' => 'Handovers'],
-                    ];
-                @endphp
-                @foreach ($navItems as $item)
-                    <a
-                        href="{{ route($item['route']) }}"
-                        class="block rounded-lg px-3 py-2 {{ request()->routeIs($item['route'].'*') ? 'bg-stone-900 text-white' : 'text-stone-600 hover:bg-stone-100' }}"
-                    >{{ $item['label'] }}</a>
-                @endforeach
-            </nav>
-            <form method="POST" action="{{ route('admin.logout') }}" class="border-t border-stone-200 p-2">
-                @csrf
-                <button type="submit" class="w-full rounded-lg px-3 py-2 text-left text-sm text-stone-500 hover:bg-stone-100">Log out</button>
-            </form>
+            <div class="flex flex-1 flex-col justify-between overflow-y-auto"><x-admin-nav /></div>
         </aside>
 
-        <main class="flex-1 overflow-y-auto">
-            <div class="mx-auto max-w-5xl px-6 py-8">
+        <main class="min-w-0 flex-1">
+            <div class="mx-auto max-w-5xl px-4 py-6 sm:px-6 sm:py-8">
                 @if (session('status'))
                     <div class="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
                         {{ session('status') }}
                     </div>
                 @endif
 
-                <div class="mb-6 flex items-center justify-between">
+                @if ($errors->any())
+                    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        <p class="font-medium">Please fix the following:</p>
+                        <ul class="mt-1 list-inside list-disc">
+                            @foreach ($errors->all() as $message)
+                                <li>{{ $message }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                @if (session('error'))
+                    <div class="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        {{ session('error') }}
+                    </div>
+                @endif
+
+                <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
                     <h1 class="text-xl font-semibold text-stone-900">{{ $title ?? 'Dashboard' }}</h1>
                     {{ $actions ?? '' }}
                 </div>

@@ -1,13 +1,13 @@
 <x-admin-layout title="Knowledge base">
     <x-slot name="actions">
-        <a href="{{ route('admin.knowledge-items.create') }}" class="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white hover:bg-stone-700">
+        <a href="{{ route('admin.knowledge-items.create') }}" class="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-signal hover:text-signal-ink">
             Add entry
         </a>
     </x-slot>
 
     <p class="mb-4 text-sm text-stone-500">This is the only source the AI Concierge is allowed to answer apartment-fact questions from. If it's not here, the AI won't guess.</p>
 
-    <div class="overflow-hidden rounded-xl border border-stone-200 bg-white">
+    <div class="overflow-x-auto rounded-xl border border-stone-200 bg-white">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-stone-200 bg-stone-50 text-xs uppercase text-stone-500">
                 <tr>

@@ -2,7 +2,7 @@
     <div class="mb-4 flex gap-2 text-sm">
         @foreach (['open' => 'Open', 'resolved' => 'Resolved'] as $value => $label)
             <a href="{{ route('admin.handovers.index', ['status' => $value]) }}"
-                class="rounded-full px-3 py-1 {{ $status === $value ? 'bg-stone-900 text-white' : 'bg-white border border-stone-300 text-stone-600' }}">
+                class="rounded-full px-3 py-1 {{ $status === $value ? 'bg-ink text-white' : 'bg-white border border-stone-300 text-stone-600' }}">
                 {{ $label }}
             </a>
         @endforeach
