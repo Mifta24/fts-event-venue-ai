@@ -1,10 +1,11 @@
-<section class="lobby-content stage-panel-right @container" aria-label="{{ $wizard['title'] }}">
+<section class="lobby-content wizard-panel stage-panel-right @container" aria-label="{{ $wizard['title'] }}">
     <a href="{{ route('apartment.show', ['apartmentSlug' => $apartment->slug, 'lang' => $locale]) }}" data-stage-exit data-tour-line="{{ $narration['tour_lobby'] }}" class="panel-close" aria-label="{{ $lobby['back'] }}"><span aria-hidden="true">×</span></a>
     <p class="lobby-eyebrow">{{ $lobby['floor'] }} {{ $floor }} · {{ $apartment->name }}</p>
     <h2>{{ $wizard['title'] }}</h2>
 
     <div class="wizard" data-wizard
         data-quote-url="{{ route('reservation.quote', $apartment->slug) }}"
+        data-availability-url="{{ route('reservation.availability', $apartment->slug) }}"
         data-submit-url="{{ route('reservation.store', $apartment->slug) }}"
         data-apartment-slug="{{ $apartment->slug }}"
         data-locale="{{ $locale }}"
@@ -26,19 +27,31 @@
             </div>
 
             <form data-wizard-form novalidate autocomplete="on">
-                <div data-step="1" class="wizard-step">
-                    <label class="wizard-field">
-                        <span>{{ $wizard['check_in'] }}</span>
-                        <input type="date" name="check_in" min="{{ $today }}" required>
-                    </label>
-                    <label class="wizard-field">
-                        <span>{{ $wizard['check_out'] }}</span>
-                        <input type="date" name="check_out" min="{{ $today }}" required>
-                    </label>
-                    <p class="wizard-hint" data-nights-hint aria-live="polite"></p>
-                    @if ($wizard['long_stay_hint'])
-                        <p class="wizard-long-stay"><span aria-hidden="true">%</span>{{ $wizard['long_stay_hint'] }}</p>
-                    @endif
+                <div data-step="1" class="wizard-step wizard-step-wide">
+                    <input type="hidden" name="check_in" required>
+                    <input type="hidden" name="check_out" required>
+
+                    <div class="wizard-dates" data-date-picker>
+                        <div class="wizard-slots">
+                            <div class="wizard-slot" data-slot="check_in"><span>{{ $wizard['check_in'] }}</span><strong data-slot-value>{{ $wizard['cal_choose'] }}</strong></div>
+                            <div class="wizard-slot" data-slot="check_out"><span>{{ $wizard['check_out'] }}</span><strong data-slot-value>{{ $wizard['cal_choose'] }}</strong></div>
+                        </div>
+                        <div class="wizard-cal">
+                            <div class="wizard-cal-head">
+                                <button type="button" data-cal-prev aria-label="{{ $wizard['cal_prev'] }}">←</button>
+                                <strong data-cal-title aria-live="polite"></strong>
+                                <button type="button" data-cal-next aria-label="{{ $wizard['cal_next'] }}">→</button>
+                            </div>
+                            <div class="wizard-cal-week" data-cal-weekdays aria-hidden="true"></div>
+                            <div class="wizard-cal-grid" data-cal-grid></div>
+                        </div>
+                        <div class="wizard-dates-extra">
+                            <p class="wizard-hint" data-nights-hint aria-live="polite"></p>
+                            @if ($wizard['long_stay_hint'])
+                                <p class="wizard-long-stay"><span aria-hidden="true">%</span>{{ $wizard['long_stay_hint'] }}</p>
+                            @endif
+                        </div>
+                    </div>
                 </div>
 
                 <div data-step="2" class="wizard-step" hidden>

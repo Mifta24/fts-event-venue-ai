@@ -1,3 +1,5 @@
+import { createDatePicker } from './date-picker';
+
 /**
  * Guided stay request wizard: five short steps on the leasing floor — dates,
  * residents, unit, contact, summary — then a reference number and
@@ -54,6 +56,19 @@ function initReservationWizard() {
         const [year, month, day] = iso.split('-').map(Number);
         return new Intl.DateTimeFormat(config.locale, { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(year, month - 1, day));
     }
+
+    const datePicker = createDatePicker({
+        root: root.querySelector('[data-date-picker]'),
+        checkIn: form.elements.check_in,
+        checkOut: form.elements.check_out,
+        config,
+        labels,
+        formatDate,
+        onChange: () => {
+            clearError();
+            form.dispatchEvent(new Event('input', { bubbles: true }));
+        },
+    });
 
     function nightsBetween(checkIn, checkOut) {
         if (!checkIn || !checkOut) return 0;
@@ -166,16 +181,22 @@ function initReservationWizard() {
     }
 
     function refreshNights() {
-        const nights = nightsBetween(form.elements.check_in.value, form.elements.check_out.value);
-        nightsHint.textContent = nights > 0 ? `${nights} ${labels.nights}` : '';
+        const checkIn = form.elements.check_in.value;
+        const nights = nightsBetween(checkIn, form.elements.check_out.value);
+
+        if (nights > 0) nightsHint.textContent = `${nights} ${labels.nights}`;
+        else if (!datePicker.hasOpenNights) nightsHint.textContent = labels.cal_none;
+        else nightsHint.textContent = checkIn ? labels.cal_pick_out : labels.cal_pick_in;
     }
 
     function validate(step) {
         const data = values();
 
         if (step === 1) {
-            if (!data.check_in || data.check_in < config.today) return { field: 'check_in', message: labels.check_in_past };
-            if (!data.check_out || data.check_out <= data.check_in) return { field: 'check_out', message: labels.check_out_after };
+            if (!data.check_in) return { field: 'check_in', message: labels.cal_pick_in };
+            if (data.check_in < config.today) return { field: 'check_in', message: labels.check_in_past };
+            if (!data.check_out) return { field: 'check_out', message: labels.cal_pick_out };
+            if (data.check_out <= data.check_in) return { field: 'check_out', message: labels.check_out_after };
             if (nightsBetween(data.check_in, data.check_out) > config.maxNights) return { field: 'check_out', message: text(labels.too_long, { max: config.maxNights }) };
         }
 
@@ -225,7 +246,7 @@ function initReservationWizard() {
         if (step === 2 || step === 3) refreshUnits();
         if (step === 3 && unitOptions.every((option) => option.classList.contains('is-disabled'))) showError(labels.capacity);
         if (step === steps.length) renderSummary();
-        if (focus) steps[step - 1].querySelector('input:not([disabled]), textarea')?.focus({ preventScroll: true });
+        if (focus) steps[step - 1].querySelector('input:not([type="hidden"]):not([disabled]), textarea, [data-cal-focus]')?.focus({ preventScroll: true });
         saveDraft();
     }
 
@@ -388,6 +409,7 @@ function initReservationWizard() {
 
     function reset() {
         form.reset();
+        datePicker.clear();
         quote = null;
         clearError();
         done.hidden = true;
@@ -423,7 +445,19 @@ function initReservationWizard() {
     });
 
     restoreDraft();
+    datePicker.show();
     refreshNights();
+
+    if (root.dataset.availabilityUrl) {
+        fetch(root.dataset.availabilityUrl, { headers: { Accept: 'application/json' } })
+            .then((response) => (response.ok ? response.json() : Promise.reject(new Error('availability unavailable'))))
+            .then((availability) => {
+                datePicker.setAvailability(availability.dates);
+                refreshNights();
+            })
+            .catch(() => { /* the server still checks every night when the guest continues */ });
+    }
+
     refreshUnits();
     showStep(current);
     preselect(root.dataset.preselectUnit || '');

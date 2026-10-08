@@ -525,6 +525,7 @@ class ApartmentPageController extends Controller
             'en' => [
                 'title' => 'Stay request', 'intro' => 'A few quick steps. Final availability is confirmed by our leasing team.',
                 'step_of' => 'Step :current of :total', 'steps' => ['Dates', 'Residents', 'Unit', 'Your details', 'Summary'],
+                'cal_prev' => 'Previous month', 'cal_next' => 'Next month', 'cal_pick_in' => 'Pick your move-in date.', 'cal_pick_out' => 'Now pick your move-out date.', 'cal_none' => 'No dates are open online right now. Ask the concierge or the apartment team.', 'cal_full' => 'Fully booked', 'cal_choose' => 'Choose a date',
                 'check_in' => 'Move-in', 'check_out' => 'Move-out', 'nights' => 'night(s)', 'adults' => 'Adults', 'children' => 'Children', 'units' => 'Units',
                 'choose_unit' => 'Choose a unit type', 'fits' => 'Up to :count residents per unit', 'too_small' => 'Too small for your household',
                 'extra_bed' => 'Add a rollaway bed', 'name' => 'Full name', 'contact_method' => 'How should we contact you?',
@@ -544,6 +545,7 @@ class ApartmentPageController extends Controller
             'ja' => [
                 'title' => '滞在リクエスト', 'intro' => 'かんたんな手順です。空室状況はリーシングチームが最終確認いたします。',
                 'step_of' => 'ステップ :current / :total', 'steps' => ['日程', '入居人数', 'お部屋', 'ご連絡先', '確認'],
+                'cal_prev' => '前の月', 'cal_next' => '次の月', 'cal_pick_in' => '入居日を選んでください。', 'cal_pick_out' => '続いて退去日を選んでください。', 'cal_none' => '現在オンラインで受付中の日程はありません。コンシェルジュまたはスタッフにご相談ください。', 'cal_full' => '満室', 'cal_choose' => '日付を選択',
                 'check_in' => '入居日', 'check_out' => '退去日', 'nights' => '泊', 'adults' => '大人', 'children' => '子ども', 'units' => '戸数',
                 'choose_unit' => 'お部屋タイプを選ぶ', 'fits' => '1戸あたり最大:count名', 'too_small' => '人数に対応できません',
                 'extra_bed' => '簡易ベッドを追加', 'name' => 'お名前', 'contact_method' => 'ご連絡方法',
@@ -563,6 +565,7 @@ class ApartmentPageController extends Controller
             default => [
                 'title' => 'Permintaan sewa', 'intro' => 'Hanya beberapa langkah singkat. Ketersediaan final dikonfirmasi oleh tim leasing kami.',
                 'step_of' => 'Langkah :current dari :total', 'steps' => ['Tanggal', 'Penghuni', 'Unit', 'Data Anda', 'Ringkasan'],
+                'cal_prev' => 'Bulan sebelumnya', 'cal_next' => 'Bulan berikutnya', 'cal_pick_in' => 'Pilih tanggal check-in.', 'cal_pick_out' => 'Sekarang pilih tanggal check-out.', 'cal_none' => 'Belum ada tanggal yang dibuka untuk permintaan online. Tanyakan ke concierge atau tim apartemen.', 'cal_full' => 'Penuh', 'cal_choose' => 'Pilih tanggal',
                 'check_in' => 'Check-in', 'check_out' => 'Check-out', 'nights' => 'malam', 'adults' => 'Dewasa', 'children' => 'Anak', 'units' => 'Jumlah unit',
                 'choose_unit' => 'Pilih tipe unit', 'fits' => 'Maks. :count penghuni per unit', 'too_small' => 'Tidak cukup untuk jumlah penghuni Anda',
                 'extra_bed' => 'Tambah kasur lipat', 'name' => 'Nama lengkap', 'contact_method' => 'Bagaimana kami menghubungi Anda?',
@@ -615,7 +618,7 @@ class ApartmentPageController extends Controller
                 'availability_note' => 'Final availability and rates are confirmed by the apartment team.',
                 'monthly_estimate' => 'Monthly stay from about :price / month',
                 'ask_unit_q' => 'Tell me more about the :name.',
-                'stat_types' => 'Unit types', 'stat_from' => 'Nightly from', 'stat_monthly' => 'Monthly stays',
+                'cta_units' => 'See the residences', 'stat_from' => 'Nightly from', 'stat_monthly' => 'Monthly stays',
                 'stat_monthly_value' => ':percent% off', 'stat_checkin' => 'Check-in',
             ],
             'ja' => [
@@ -645,7 +648,7 @@ class ApartmentPageController extends Controller
                 'availability_note' => '空室状況と料金は、スタッフが最終確認いたします。',
                 'monthly_estimate' => '月単位の滞在は約 :price / 月から',
                 'ask_unit_q' => ':name について詳しく教えてください。',
-                'stat_types' => 'お部屋タイプ', 'stat_from' => '1泊あたり', 'stat_monthly' => '月単位の滞在',
+                'cta_units' => 'お部屋を見る', 'stat_from' => '1泊あたり', 'stat_monthly' => '月単位の滞在',
                 'stat_monthly_value' => ':percent%オフ', 'stat_checkin' => 'チェックイン',
             ],
             default => [
@@ -675,7 +678,7 @@ class ApartmentPageController extends Controller
                 'availability_note' => 'Ketersediaan dan tarif final dikonfirmasi oleh tim apartemen.',
                 'monthly_estimate' => 'Sewa bulanan mulai sekitar :price / bulan',
                 'ask_unit_q' => 'Ceritakan lebih banyak tentang :name.',
-                'stat_types' => 'Tipe unit', 'stat_from' => 'Per malam mulai', 'stat_monthly' => 'Sewa bulanan',
+                'cta_units' => 'Lihat unit', 'stat_from' => 'Per malam mulai', 'stat_monthly' => 'Sewa bulanan',
                 'stat_monthly_value' => 'hemat :percent%', 'stat_checkin' => 'Check-in',
             ],
         };

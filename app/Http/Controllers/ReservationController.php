@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Apartment;
 use App\Models\Conversation;
+use App\Models\UnitInventory;
 use App\Models\UnitType;
 use App\Services\Reservation\ReservationHandover;
 use App\Services\Reservation\ReservationService;
@@ -16,6 +17,9 @@ use Illuminate\Validation\ValidationException;
 class ReservationController extends Controller
 {
     private const SUPPORTED_LOCALES = ['id', 'en', 'ja'];
+
+    /** How far ahead the date picker looks for open nights. */
+    private const AVAILABILITY_DAYS = 366;
 
     private const PHONE_PATTERN = '/^\+?[0-9\s\-().]{6,20}$/';
 
@@ -64,6 +68,34 @@ class ReservationController extends Controller
         private readonly ReservationService $reservations,
         private readonly ReservationHandover $handover,
     ) {}
+
+    /**
+     * The nights on which at least one unit type still has a free unit, so
+     * the date picker can grey out the days that are fully booked.
+     */
+    public function availability(string $apartmentSlug): JsonResponse
+    {
+        $apartment = $this->publishedApartment($apartmentSlug);
+        $today = CarbonImmutable::now($apartment->timezone)->startOfDay();
+        $until = $today->addDays(self::AVAILABILITY_DAYS);
+
+        $dates = UnitInventory::whereIn('unit_type_id', $apartment->unitTypes()->where('is_active', true)->select('id'))
+            ->whereRaw('total_units > booked_units')
+            ->whereDate('stay_date', '>=', $today->toDateString())
+            ->whereDate('stay_date', '<=', $until->toDateString())
+            ->distinct()
+            ->orderBy('stay_date')
+            ->get(['stay_date'])
+            ->map(fn (UnitInventory $night) => $night->stay_date->toDateString())
+            ->unique()
+            ->values();
+
+        return response()->json([
+            'today' => $today->toDateString(),
+            'until' => $until->toDateString(),
+            'dates' => $dates,
+        ]);
+    }
 
     public function quote(Request $request, string $apartmentSlug): JsonResponse
     {

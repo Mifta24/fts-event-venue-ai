@@ -54,6 +54,7 @@ Route::prefix('{apartmentSlug}')->group(function () {
     Route::get('reservation', [ApartmentPageController::class, 'reservationScene'])->name('apartment.reservation');
 
     Route::prefix('reservation')->name('reservation.')->middleware('throttle:20,1')->group(function () {
+        Route::get('availability', [ReservationController::class, 'availability'])->name('availability');
         Route::post('quote', [ReservationController::class, 'quote'])->name('quote');
         Route::post('/', [ReservationController::class, 'store'])->name('store');
     });
