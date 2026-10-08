@@ -462,7 +462,7 @@ class ApartmentLobbyTest extends TestCase
             ->assertOk()
             ->assertSee('class="unit-directory"', false)
             ->assertSee('class="unit-nav"', false)
-            ->assertSee('mulai dari IDR 950.000 / malam')
+            ->assertSee('mulai dari IDR&nbsp;950.000 / malam', false)
             ->assertDontSee('Retired Unit')
             // the lift panel still takes the guest back down to the lobby
             ->assertSee('href="'.route('apartment.show', ['apartmentSlug' => 'demo', 'lang' => 'id']).'" class="lift-button"', false);
@@ -549,5 +549,37 @@ class ApartmentLobbyTest extends TestCase
                 ->assertSeeInOrder(['class="lift-panel"', 'href="'.$url.'"', 'data-stage-exit', 'data-topic="'.$topic.'"'], false);
             $this->get($url)->assertOk();
         }
+    }
+
+    public function test_lobby_offers_the_residences_and_a_stay_request_as_the_two_main_actions_in_the_guest_language(): void
+    {
+        $apartment = Apartment::create(['name' => 'Demo', 'slug' => 'demo', 'public_status' => 'published', 'currency' => 'IDR', 'monthly_discount_percent' => 25]);
+        $apartment->unitTypes()->create(['name' => 'Studio', 'slug' => 'studio', 'base_price' => 650000, 'max_adults' => 2, 'max_children' => 0, 'is_active' => true]);
+
+        $this->get('/demo?lang=id')
+            ->assertOk()
+            ->assertSee('class="lobby-action lobby-action-signal" data-stage-exit', false)
+            ->assertSee('href="'.route('apartment.units', ['apartmentSlug' => 'demo', 'lang' => 'id']).'"', false)
+            ->assertSee('Lihat unit')
+            ->assertSee('href="'.route('apartment.reservation', ['apartmentSlug' => 'demo', 'lang' => 'id']).'"', false)
+            ->assertSee('Rencanakan menginap');
+
+        $this->get('/demo?lang=en')->assertOk()->assertSee('See the residences')->assertSee('Plan my stay');
+        $this->get('/demo?lang=ja')->assertOk()->assertSee('お部屋を見る');
+    }
+
+    public function test_lobby_without_any_unit_type_shows_no_actions_that_lead_nowhere(): void
+    {
+        Apartment::create(['name' => 'Demo', 'slug' => 'demo', 'public_status' => 'published']);
+
+        $this->get('/demo?lang=en')->assertOk()->assertDontSee('lobby-cta', false)->assertDontSee('See the residences');
+    }
+
+    public function test_lobby_stats_show_the_price_from_the_monthly_saving_and_the_move_in_time(): void
+    {
+        $apartment = Apartment::create(['name' => 'Demo', 'slug' => 'demo', 'public_status' => 'published', 'currency' => 'IDR', 'monthly_discount_percent' => 25, 'check_in_time' => '14:00']);
+        $apartment->unitTypes()->create(['name' => 'Studio', 'slug' => 'studio', 'base_price' => 650000, 'max_adults' => 2, 'max_children' => 0, 'is_active' => true]);
+
+        $this->get('/demo?lang=en')->assertOk()->assertSee('IDR 650.000')->assertSee('25% off')->assertSee('14:00');
     }
 }

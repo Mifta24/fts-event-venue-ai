@@ -1,6 +1,6 @@
 @php
     $unitName = $unitType->translatedName($locale);
-    $money = fn ($value) => $apartment->currency.' '.number_format((float) $value, 0, ',', '.');
+    $money = fn ($value) => $apartment->currency."\u{00A0}".number_format((float) $value, 0, ',', '.');
     $beds = collect($unitType->bed_config ?? [])
         ->map(fn ($bed) => $bed['count'].' × '.($unitTerms['bed'][$bed['type']] ?? Str::headline($bed['type'])))
         ->implode(', ');
@@ -54,7 +54,7 @@
                 <p class="unit-scene-description">{{ $unitType->translatedDescription($locale) }}</p>
 
                 <div class="unit-scene-rate">
-                    <p><span class="unit-scene-rate-label">{{ $labels['from'] }}</span> <strong>{{ $money($unitType->base_price) }}</strong> <span class="unit-scene-rate-label">{{ $labels['per_night'] }}</span></p>
+                    <p><span class="unit-scene-rate-label">{{ $labels['from'] }}</span> <span class="unit-scene-rate-amount"><strong>{{ $money($unitType->base_price) }}</strong> <span class="unit-scene-rate-label">{{ $labels['per_night'] }}</span></span></p>
                     @if ($apartment->monthly_discount_percent > 0 || $apartment->weekly_discount_percent > 0)
                         <p class="unit-scene-monthly">{{ str_replace(':price', $money($monthlyRate), $lobby['monthly_estimate']) }}</p>
                     @endif

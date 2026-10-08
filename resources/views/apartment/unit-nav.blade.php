@@ -10,9 +10,12 @@
                     <img class="unit-nav-thumb" src="{{ $item->images->first()->image_source }}" alt="" loading="lazy">
                 @endif
                 <span class="unit-nav-text">
-                    <span class="unit-nav-layout">{{ $item->isStudio() ? $lobby['studio'] : str_replace([':count', ':baths'], [$item->bedrooms, $item->bathrooms], $lobby['bedrooms']) }}@if($item->size_sqm) · {{ $item->size_sqm }} m²@endif</span>
-                    <span class="unit-nav-name">{{ $item->translatedName($locale) }}</span>
-                    <span class="unit-nav-price">{{ $labels['from'] }} {{ $apartment->currency }} {{ number_format((float) $item->base_price, 0, ',', '.') }} {{ $labels['per_night'] }}</span>
+                    <span class="unit-nav-layout">{{ $item->isStudio() ? $lobby['studio'] : str_replace([':count', ':baths'], [$item->bedrooms, $item->bathrooms], $lobby['bedrooms']) }}</span>
+                    <span class="unit-nav-name-row">
+                        <span class="unit-nav-name">{{ $item->translatedName($locale) }}</span>
+                        @if ($item->size_sqm)<span class="unit-nav-size">{{ $item->size_sqm }}&nbsp;m²</span>@endif
+                    </span>
+                    <span class="unit-nav-price">{{ $labels['from'] }} {{ $apartment->currency }}&nbsp;{{ number_format((float) $item->base_price, 0, ',', '.') }} {{ $labels['per_night'] }}</span>
                 </span>
                 <span class="unit-nav-go" aria-hidden="true">→</span>
             </a>
