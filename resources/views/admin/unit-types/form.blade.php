@@ -162,7 +162,7 @@
 
         <div class="flex justify-end gap-3">
             <a href="{{ route('admin.unit-types.index') }}" class="rounded-lg border border-stone-300 px-4 py-2 text-sm text-stone-600 hover:bg-stone-50">Cancel</a>
-            <button type="submit" class="rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white hover:bg-stone-700">Save unit type</button>
+            <button type="submit" class="rounded-lg bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-signal hover:text-signal-ink">Save unit type</button>
         </div>
     </form>
 </x-admin-layout>

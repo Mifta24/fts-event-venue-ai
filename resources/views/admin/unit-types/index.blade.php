@@ -1,11 +1,11 @@
 <x-admin-layout title="Units">
     <x-slot name="actions">
-        <a href="{{ route('admin.unit-types.create') }}" class="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white hover:bg-stone-700">
+        <a href="{{ route('admin.unit-types.create') }}" class="rounded-lg bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-signal hover:text-signal-ink">
             Add unit type
         </a>
     </x-slot>
 
-    <div class="overflow-hidden rounded-xl border border-stone-200 bg-white">
+    <div class="overflow-x-auto rounded-xl border border-stone-200 bg-white">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-stone-200 bg-stone-50 text-xs uppercase text-stone-500">
                 <tr>
@@ -32,7 +32,8 @@
                             </span>
                         </td>
                         <td class="px-4 py-3 text-right">
-                            <a href="{{ route('admin.unit-types.edit', $unitType) }}" class="text-stone-600 hover:underline">Edit</a>
+                            <a href="{{ route('admin.unit-types.inventory.index', $unitType) }}" class="text-stone-600 hover:underline">Inventory</a>
+                            <a href="{{ route('admin.unit-types.edit', $unitType) }}" class="ml-3 text-stone-600 hover:underline">Edit</a>
                             <form method="POST" action="{{ route('admin.unit-types.destroy', $unitType) }}" class="inline" onsubmit="return confirm('Delete this unit type?')">
                                 @csrf @method('DELETE')
                                 <button type="submit" class="ml-3 text-red-600 hover:underline">Delete</button>

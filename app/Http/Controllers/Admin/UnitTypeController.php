@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Concerns\ResolvesCurrentApartment;
 use App\Http\Controllers\Controller;
+use App\Models\Booking;
 use App\Models\UnitType;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,15 @@ class UnitTypeController extends Controller
     {
         $apartment = $this->currentApartment($request);
         abort_if($unitType->apartment_id !== $apartment->id, 404);
+
+        $openBookings = $unitType->bookings()
+            ->whereIn('status', [Booking::STATUS_PENDING, Booking::STATUS_CONFIRMED])
+            ->whereDate('check_out', '>=', now($apartment->timezone)->toDateString())
+            ->count();
+
+        if ($openBookings > 0) {
+            return back()->with('error', "\"{$unitType->name}\" still has {$openBookings} pending or confirmed booking(s). Cancel them first, or hide the unit type instead.");
+        }
 
         $unitType->delete();
 

@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HandoverController;
 use App\Http\Controllers\Admin\KnowledgeItemController;
+use App\Http\Controllers\Admin\UnitInventoryController;
 use App\Http\Controllers\Admin\UnitTypeController;
 use App\Http\Controllers\ApartmentPageController;
 use App\Http\Controllers\Auth\LoginController;
@@ -24,6 +25,8 @@ Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
 
         Route::resource('unit-types', UnitTypeController::class)->except('show');
+        Route::get('unit-types/{unitType}/inventory', [UnitInventoryController::class, 'index'])->name('unit-types.inventory.index');
+        Route::post('unit-types/{unitType}/inventory', [UnitInventoryController::class, 'store'])->name('unit-types.inventory.store');
         Route::resource('knowledge-items', KnowledgeItemController::class)->except('show');
 
         Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');

@@ -61,6 +61,11 @@ class UnitType extends Model
         return $this->hasMany(UnitImage::class)->orderBy('sort_order');
     }
 
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
     public function inventory(): HasMany
     {
         return $this->hasMany(UnitInventory::class);
