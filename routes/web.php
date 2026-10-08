@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\ApartmentSettingController;
 use App\Http\Controllers\Admin\BookingController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HandoverController;
@@ -31,6 +32,9 @@ Route::prefix('admin')->name('admin.')->group(function () {
 
         Route::get('bookings', [BookingController::class, 'index'])->name('bookings.index');
         Route::patch('bookings/{booking}/status', [BookingController::class, 'updateStatus'])->name('bookings.status');
+
+        Route::get('settings', [ApartmentSettingController::class, 'edit'])->name('settings.edit');
+        Route::put('settings', [ApartmentSettingController::class, 'update'])->name('settings.update');
 
         Route::get('handovers', [HandoverController::class, 'index'])->name('handovers.index');
         Route::get('handovers/{handover}', [HandoverController::class, 'show'])->name('handovers.show');
