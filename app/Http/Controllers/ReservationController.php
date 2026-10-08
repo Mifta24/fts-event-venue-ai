@@ -134,6 +134,7 @@ class ReservationController extends Controller
             'guest_email' => $isEmail ? $data['contact_value'] : null,
             'guest_phone' => $isEmail ? null : $data['contact_value'],
             'contact_type' => $data['contact_type'],
+            'locale' => $locale,
             'notes' => $data['special_request'] ?? null,
         ], $conversation);
 

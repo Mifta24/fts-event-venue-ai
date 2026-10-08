@@ -8,6 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Notification as NotificationFacade;
 use Illuminate\Support\Str;
 
 #[Fillable([
@@ -74,6 +76,14 @@ class Apartment extends Model
             ->using(ApartmentUser::class)
             ->withPivot(['role', 'status'])
             ->withTimestamps();
+    }
+
+    /**
+     * Sends a notification to every active member of the apartment team.
+     */
+    public function notifyStaff(Notification $notification): void
+    {
+        NotificationFacade::send($this->users()->wherePivot('status', 'active')->get(), $notification);
     }
 
     public function unitTypes(): HasMany

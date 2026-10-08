@@ -2,11 +2,12 @@
 
 namespace App\Services\Concierge;
 
-use App\Models\Conversation;
-use App\Models\HandoverRequest;
 use App\Models\Apartment;
 use App\Models\ApartmentKnowledgeItem;
+use App\Models\Conversation;
+use App\Models\HandoverRequest;
 use App\Models\UnitType;
+use App\Notifications\NewHandoverRequest;
 use App\Services\Reservation\ReservationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
@@ -384,6 +385,7 @@ class ApartmentConciergeTools
             'guest_name' => $input['guest_name'],
             'guest_email' => $input['guest_email'] ?? null,
             'guest_phone' => $input['guest_phone'],
+            'locale' => $this->locale,
             'notes' => $input['notes'] ?? null,
         ], $this->conversation);
 
@@ -418,12 +420,14 @@ class ApartmentConciergeTools
         $reason = $input['reason'];
         $summary = $input['summary'];
 
-        HandoverRequest::create([
+        $handover = HandoverRequest::create([
             'conversation_id' => $this->conversation->id,
             'reason' => $reason,
             'summary' => $summary,
             'status' => HandoverRequest::STATUS_OPEN,
         ]);
+
+        $this->apartment->notifyStaff(new NewHandoverRequest($handover));
 
         $this->conversation->update([
             'status' => Conversation::STATUS_HANDED_OVER,

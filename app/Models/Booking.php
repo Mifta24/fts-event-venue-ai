@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'guest_email',
     'guest_phone',
     'contact_type',
+    'locale',
     'check_in',
     'check_out',
     'adults',
@@ -33,6 +34,18 @@ class Booking extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    /**
+     * Which status a booking may move to from its current one. Cancelled is
+     * final: its units went back to the inventory and are not held any more.
+     *
+     * @var array<string, list<string>>
+     */
+    private const TRANSITIONS = [
+        self::STATUS_PENDING => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+        self::STATUS_CONFIRMED => [self::STATUS_CANCELLED],
+        self::STATUS_CANCELLED => [],
+    ];
+
     protected function casts(): array
     {
         return [
@@ -50,7 +63,7 @@ class Booking extends Model
 
     public function unitType(): BelongsTo
     {
-        return $this->belongsTo(UnitType::class);
+        return $this->belongsTo(UnitType::class)->withTrashed();
     }
 
     public function conversation(): BelongsTo
@@ -72,6 +85,11 @@ class Booking extends Model
         } while (static::where('reference', $reference)->exists());
 
         return $reference;
+    }
+
+    public function canTransitionTo(string $status): bool
+    {
+        return in_array($status, self::TRANSITIONS[$this->status] ?? [], true);
     }
 
     public function nights(): int

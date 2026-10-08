@@ -1,14 +1,14 @@
 <x-admin-layout title="Bookings">
-    <div class="mb-4 flex gap-2 text-sm">
+    <div class="mb-4 flex flex-wrap gap-2 text-sm">
         @foreach (['' => 'All', 'pending' => 'Pending', 'confirmed' => 'Confirmed', 'cancelled' => 'Cancelled'] as $value => $label)
             <a href="{{ route('admin.bookings.index', $value ? ['status' => $value] : []) }}"
-                class="rounded-full px-3 py-1 {{ $status === $value || (! $status && $value === '') ? 'bg-stone-900 text-white' : 'bg-white border border-stone-300 text-stone-600' }}">
+                class="rounded-full px-3 py-1 {{ $status === $value || (! $status && $value === '') ? 'bg-ink text-white' : 'bg-white border border-stone-300 text-stone-600' }}">
                 {{ $label }}
             </a>
         @endforeach
     </div>
 
-    <div class="overflow-hidden rounded-xl border border-stone-200 bg-white">
+    <div class="hidden overflow-x-auto rounded-xl border border-stone-200 bg-white md:block">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-stone-200 bg-stone-50 text-xs uppercase text-stone-500">
                 <tr>
@@ -33,27 +33,9 @@
                         <td class="px-4 py-3">{{ $booking->unit_count }} × {{ $booking->unitType->name }}<p class="text-xs text-stone-400">{{ $booking->adults }} adults{{ $booking->children ? ', '.$booking->children.' children' : '' }}</p></td>
                         <td class="px-4 py-3 text-xs text-stone-500">{{ $booking->check_in->toFormattedDateString() }} → {{ $booking->check_out->toFormattedDateString() }}</td>
                         <td class="px-4 py-3">{{ $apartment->currency }} {{ number_format((float) $booking->total_price, 0, ',', '.') }}</td>
-                        <td class="px-4 py-3">
-                            <span @class([
-                                'rounded-full px-2 py-0.5 text-xs',
-                                'bg-amber-100 text-amber-700' => $booking->status === 'pending',
-                                'bg-emerald-100 text-emerald-700' => $booking->status === 'confirmed',
-                                'bg-stone-100 text-stone-500' => $booking->status === 'cancelled',
-                            ])>{{ ucfirst($booking->status) }}</span>
-                        </td>
+                        <td class="px-4 py-3">@include('admin.bookings._status')</td>
                         <td class="px-4 py-3 text-right">
-                            @if ($booking->status === 'pending')
-                                <form method="POST" action="{{ route('admin.bookings.status', $booking) }}" class="inline">
-                                    @csrf @method('PATCH')
-                                    <input type="hidden" name="status" value="confirmed">
-                                    <button type="submit" class="text-emerald-600 hover:underline">Confirm</button>
-                                </form>
-                                <form method="POST" action="{{ route('admin.bookings.status', $booking) }}" class="inline" onsubmit="return confirm('Cancel this booking?')">
-                                    @csrf @method('PATCH')
-                                    <input type="hidden" name="status" value="cancelled">
-                                    <button type="submit" class="ml-3 text-red-600 hover:underline">Cancel</button>
-                                </form>
-                            @endif
+                            @include('admin.bookings._actions')
                         </td>
                     </tr>
                 @empty
@@ -61,6 +43,32 @@
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    <div class="space-y-3 md:hidden">
+        @forelse ($bookings as $booking)
+            <article class="rounded-xl border border-stone-200 bg-white p-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="min-w-0">
+                        <p class="font-mono text-xs text-stone-500">{{ $booking->reference }}</p>
+                        <p class="mt-0.5 truncate font-medium text-stone-900">{{ $booking->guest_name }}</p>
+                    </div>
+                    @include('admin.bookings._status')
+                </div>
+                <p class="mt-2 text-sm text-stone-700">{{ $booking->unit_count }} × {{ $booking->unitType->name }} · {{ $booking->adults }} adults{{ $booking->children ? ', '.$booking->children.' children' : '' }}</p>
+                <p class="mt-1 text-xs text-stone-500">{{ $booking->check_in->toFormattedDateString() }} → {{ $booking->check_out->toFormattedDateString() }} · {{ $booking->nights() }} nights</p>
+                <p class="mt-1 text-sm font-medium text-stone-900">{{ $apartment->currency }} {{ number_format((float) $booking->total_price, 0, ',', '.') }}</p>
+                <p class="mt-2 text-xs text-stone-500">{{ $booking->contact_type ? ucfirst($booking->contact_type).': ' : '' }}{{ $booking->guest_phone ?? $booking->guest_email }}</p>
+                @if ($booking->notes)<p class="mt-1 text-xs italic text-stone-400">{{ $booking->notes }}</p>@endif
+                @if ($booking->canTransitionTo('confirmed') || $booking->canTransitionTo('cancelled'))
+                    <div class="mt-3 flex items-center gap-1 border-t border-stone-100 pt-3 text-sm">
+                        @include('admin.bookings._actions', ['button' => 'min-h-11 px-1 font-medium'])
+                    </div>
+                @endif
+            </article>
+        @empty
+            <p class="rounded-xl border border-stone-200 bg-white px-4 py-8 text-center text-stone-400">No bookings found.</p>
+        @endforelse
     </div>
 
     <div class="mt-4">{{ $bookings->links() }}</div>

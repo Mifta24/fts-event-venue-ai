@@ -43,11 +43,9 @@ class BookingController extends Controller
             'status' => ['required', 'in:'.implode(',', [Booking::STATUS_CONFIRMED, Booking::STATUS_CANCELLED])],
         ]);
 
-        if ($data['status'] === Booking::STATUS_CANCELLED && $booking->status !== Booking::STATUS_CANCELLED) {
-            $this->reservations->releaseInventory($booking);
+        if (! $this->reservations->changeStatus($booking, $data['status'])) {
+            return back()->with('error', "Booking {$booking->reference} is {$booking->status} and cannot be marked as {$data['status']}.");
         }
-
-        $booking->update(['status' => $data['status']]);
 
         return back()->with('status', "Booking {$booking->reference} marked as {$data['status']}.");
     }
