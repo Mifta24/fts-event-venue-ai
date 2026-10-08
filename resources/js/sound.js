@@ -1,7 +1,7 @@
 /**
  * Small UI sounds, synthesised with the Web Audio API (no audio files):
- * a lobby bell when entering, a soft "ding" for incoming messages and a
- * tick when sending. Sound only ever follows a guest action, never plays on
+ * a lift button beep and arrival chime when moving between floors, a soft "ding" for incoming messages and a
+ * short "pop" when sending or toggling. Sound only ever follows a guest action, never plays on
  * its own, and can be muted with the header toggle (remembered per browser).
  */
 const STORAGE_KEY = 'apartment_sound';
@@ -54,18 +54,36 @@ function bell(frequency, start, gain, duration) {
     tone(frequency * 2.76, start, duration * 0.45, gain * 0.28);
 }
 
+/** A short rounded click: a sine that drops quickly in pitch, like a water-drop pop. */
+function pop(fromFrequency, toFrequency, start, duration, gain) {
+    const oscillator = context.createOscillator();
+    const amp = context.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(fromFrequency, start);
+    oscillator.frequency.exponentialRampToValueAtTime(toFrequency, start + duration);
+    amp.gain.setValueAtTime(0.0001, start);
+    amp.gain.exponentialRampToValueAtTime(gain, start + 0.004);
+    amp.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+    oscillator.connect(amp).connect(master);
+    oscillator.start(start);
+    oscillator.stop(start + duration + 0.03);
+}
+
 const sounds = {
+    /** Lift call: the button beep, then the two-tone arrival chime. */
     enter(now) {
-        bell(659.25, now, 0.14, 1.1);
-        bell(987.77, now + 0.14, 0.12, 1.0);
-        bell(1318.51, now + 0.28, 0.09, 0.9);
+        tone(1568, now, 0.09, 0.07);
+        bell(1318.51, now + 0.16, 0.13, 0.9);
+        bell(987.77, now + 0.5, 0.13, 1.1);
     },
     incoming(now) {
         bell(880, now, 0.11, 0.55);
         bell(1174.66, now + 0.09, 0.08, 0.5);
     },
     sent(now) {
-        tone(523.25, now, 0.12, 0.05);
+        pop(1200, 420, now, 0.07, 0.16);
     },
 };
 
