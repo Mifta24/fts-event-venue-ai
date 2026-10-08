@@ -16,17 +16,25 @@ Satu aplikasi bisa melayani beberapa gedung apartemen. Setiap apartemen punya ha
   - Menjawab dalam bahasa yang ditulis tamu.
   - Menampilkan kartu unit (denah, luas, total dengan diskon) langsung di dalam chat.
 - **Permintaan sewa**: quote harga per unit dan tanggal (termasuk diskon menginap lama), lalu kirim permintaan (status awal `pending`).
+  - Tanggal dipilih lewat kalender dalam bahasa tamu. Hari yang unitnya sudah penuh dicoret, dan rentang tidak bisa melewati malam yang penuh (data dari `GET /{apartmentSlug}/reservation/availability`).
 
 ### Desain
 Tema "Skyline Residence": tinta biru malam, kertas beton, dan aksen hijau-lime seperti papan penunjuk gedung. Font Space Grotesk dan IBM Plex Mono (label bergaya signage). Foto kota dan interior apartemen dari Unsplash.
 
 ### Sisi admin (`/admin`)
-- Dashboard ringkasan.
+- Dashboard ringkasan: permintaan sewa yang menunggu lebih dari 24 jam, handover terbuka, check-in 7 hari ke depan, dan okupansi 30 hari ke depan. Panel admin bisa dipakai dari ponsel (menu geser, daftar booking berupa kartu).
 - CRUD **tipe unit** (termasuk denah, lantai, gambar, dan inventori).
 - CRUD **knowledge items**, yaitu basis pengetahuan yang menjadi sumber jawaban concierge (aturan gedung, fasilitas, layanan, transportasi, FAQ).
-- Daftar **booking** dan ubah statusnya (`pending`, `confirmed`, `cancelled`).
+- **Inventori dan harga** per tipe unit (menu Units → Inventory): buka rentang tanggal, atur jumlah unit yang disewakan dan harga per malam. Jumlah unit tidak bisa diturunkan di bawah yang sudah dibooking. Tampilan bulanan berupa kalender: ketuk satu hari untuk mengisi formulir, ketuk hari berikutnya untuk memilih ujung rentang.
+- **Pengaturan apartemen** (khusus `owner`): kontak, jam masuk dan keluar, bahasa dan zona waktu, diskon mingguan dan bulanan, serta status halaman publik (draft atau published).
+- Daftar **booking** dan ubah statusnya. Alurnya `pending` → `confirmed` atau `cancelled`, dan `confirmed` → `cancelled`. `cancelled` bersifat final (unitnya sudah dikembalikan ke inventori). Tipe unit yang masih punya booking aktif tidak bisa dihapus.
 - **Handover**: percakapan yang diserahkan concierge ke staf. Staf bisa membalas langsung ke tamu dan menandainya selesai.
 - Peran pengguna per apartemen: `owner` dan `staff`.
+
+### Notifikasi email
+- **Ke staf** (semua anggota aktif apartemen): permintaan sewa baru dan handover baru dari concierge.
+- **Ke tamu** yang memberi alamat email: tanda terima permintaan, lalu pemberitahuan saat booking dikonfirmasi atau dibatalkan. Bahasanya mengikuti bahasa tamu (`id`, `en`, `ja`). Tamu yang memilih WhatsApp atau telepon dihubungi langsung oleh staf.
+- Email dikirim lewat queue, jadi worker harus jalan (`composer dev` sudah menyertakannya; di produksi jalankan `php artisan queue:work`). Atur `MAIL_*` di `.env`. Bawaannya `MAIL_MAILER=log`, yaitu email hanya ditulis ke log.
 
 ## Cara kerja AI Concierge
 
@@ -128,6 +136,7 @@ Pilihan `--locale` adalah `id`, `en`, atau `ja`. Cara ini berguna untuk menguji 
 | GET | `/{apartmentSlug}/units`, `/units/{unitSlug}` | Direktori dan detail tipe unit (lantai 02) |
 | GET | `/{apartmentSlug}/facilities`, `/facilities/{id}` | Fasilitas bersama (lantai 03) |
 | GET | `/{apartmentSlug}/info`, `/reservation`, `/staff` | Informasi gedung (04), permintaan sewa (05), tim apartemen (06) |
+| GET | `/{apartmentSlug}/reservation/availability` | Malam yang masih punya unit kosong, untuk kalender |
 | POST | `/{apartmentSlug}/reservation/quote` | Hitung harga, termasuk diskon menginap lama |
 | POST | `/{apartmentSlug}/reservation` | Kirim permintaan sewa |
 | POST | `/{apartmentSlug}/concierge/start` | Mulai percakapan |
@@ -167,7 +176,7 @@ Atau jalankan satu berkas:
 php artisan test --compact tests/Feature/ConciergeChatTest.php
 ```
 
-Cakupan tes: akses admin, chat concierge, tool booking (termasuk diskon menginap lama dan filter kamar tidur), permintaan sewa, semua lantai dan panel lift, dan `ContentGuard`.
+Cakupan tes: akses admin, chat concierge, tool booking (termasuk diskon menginap lama dan filter kamar tidur), permintaan sewa, status booking, notifikasi email, inventori dan pengaturan admin, semua lantai dan panel lift, dan `ContentGuard`. GitHub Actions (`.github/workflows/ci.yml`) menjalankan Pint dan seluruh tes di setiap push ke `master` dan pull request.
 
 ## Gaya kode
 
@@ -181,6 +190,7 @@ vendor/bin/pint --dirty
 - Set `APP_ENV=production` dan `APP_DEBUG=false`.
 - Seeder demo tidak jalan di produksi. Buat akun owner dan apartemen Anda sendiri, lalu isi `weekly_discount_percent` dan `monthly_discount_percent` bila ingin memberi tarif menginap lama.
 - Pastikan server aplikasi bisa menjangkau `LOCAL_LLM_BASE_URL`. Pada setup saat ini endpoint LLM diakses lewat Tailscale.
+- Jalankan queue worker dan isi `MAIL_*` dengan SMTP asli, atau notifikasi email tidak akan terkirim.
 - Karena ada batas 100 detik dari Cloudflare, jangan menaikkan batas waktu respons concierge melebihi 85 detik.
 
 ## Lisensi
