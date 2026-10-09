@@ -2,69 +2,80 @@
 
 namespace App\Services\Reservation;
 
-use App\Models\Apartment;
 use App\Models\Booking;
+use App\Models\Venue;
+use App\Notifications\GuestBookingSummary;
 
 /**
- * Builds the WhatsApp / phone / email hand-over links that carry a
- * reservation summary (or a plain "talk to staff" request) to the apartment team.
+ * Builds the WhatsApp / phone / email hand-over links that carry an
+ * event request summary (or a plain "talk to staff" request) to the venue team.
  */
 class ReservationHandover
 {
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    public function forBooking(Apartment $apartment, Booking $booking, string $locale): array
+    public function forBooking(Venue $venue, Booking $booking, string $locale): array
     {
         $message = $this->reservationMessage($booking, $locale);
 
-        return $this->links($apartment, $message, $this->subject('reservation', $locale).' '.$booking->reference);
+        return $this->links($venue, $message, $this->subject('reservation', $locale).' '.$booking->reference);
     }
 
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    public function forStaff(Apartment $apartment, string $locale): array
+    public function forStaff(Venue $venue, string $locale): array
     {
-        return $this->links($apartment, $this->subject('staff_message', $locale), $this->subject('staff', $locale));
+        return $this->links($venue, $this->subject('staff_message', $locale), $this->subject('staff', $locale));
     }
 
     /**
      * @return array{whatsapp_url: ?string, phone_url: ?string, email_url: ?string}
      */
-    private function links(Apartment $apartment, string $message, string $subject): array
+    private function links(Venue $venue, string $message, string $subject): array
     {
-        $whatsapp = preg_replace('/\D+/', '', (string) $apartment->whatsapp);
-        $phone = preg_replace('/[^\d+]/', '', (string) $apartment->phone);
+        $whatsapp = preg_replace('/\D+/', '', (string) $venue->whatsapp);
+        $phone = preg_replace('/[^\d+]/', '', (string) $venue->phone);
 
         return [
             'whatsapp_url' => $whatsapp !== '' ? 'https://wa.me/'.$whatsapp.'?text='.rawurlencode($message) : null,
             'phone_url' => $phone !== '' ? 'tel:'.$phone : null,
-            'email_url' => filled($apartment->email) ? 'mailto:'.$apartment->email.'?subject='.rawurlencode($subject).'&body='.rawurlencode($message) : null,
+            'email_url' => filled($venue->email) ? 'mailto:'.$venue->email.'?subject='.rawurlencode($subject).'&body='.rawurlencode($message) : null,
         ];
     }
 
     private function reservationMessage(Booking $booking, string $locale): string
     {
-        $booking->loadMissing('unitType');
+        $booking->loadMissing('space');
 
         $labels = match ($locale) {
-            'en' => ['Hello, I would like to request a stay at the apartment.', 'Name', 'Move-in', 'Move-out', 'Residents', 'Units', 'Unit type', 'Special request', 'Reference'],
-            'ja' => ['こんにちは。アパートメントの滞在をリクエストしたいです。', 'お名前', '入居日', '退去日', '人数', '戸数', 'お部屋タイプ', 'ご要望', '予約番号'],
-            default => ['Halo, saya ingin mengajukan permintaan sewa unit apartemen.', 'Nama', 'Check-in', 'Check-out', 'Penghuni', 'Jumlah unit', 'Tipe unit', 'Permintaan khusus', 'Referensi'],
+            'en' => ['Hello, I would like to request an event at the venue.', 'Name', 'Event', 'Date', 'Guests', 'Setup', 'Space', 'Special request', 'Reference'],
+            'ja' => ['こんにちは。会場でのイベント開催をリクエストしたいです。', 'お名前', 'イベント', '開催日', '人数', 'レイアウト', '会場', 'ご要望', '予約番号'],
+            default => ['Halo, saya ingin mengajukan permintaan acara di venue.', 'Nama', 'Acara', 'Tanggal', 'Jumlah tamu', 'Susunan', 'Ruang', 'Permintaan khusus', 'Referensi'],
         };
 
-        $guests = $booking->adults + $booking->children;
+        $format = fn ($date) => $date->locale($locale)->translatedFormat('j F Y');
+        $dates = $booking->days() === 1
+            ? $format($booking->event_start)
+            : $format($booking->event_start).' → '.$format($booking->event_end);
 
-        return implode("\n", [
+        $lines = [
             $labels[0],
             '',
             "{$labels[1]}: {$booking->guest_name}",
-            "{$labels[2]}: ".$booking->check_in->locale($locale)->translatedFormat('j F Y'),
-            "{$labels[3]}: ".$booking->check_out->locale($locale)->translatedFormat('j F Y'),
-            "{$labels[4]}: {$guests}",
-            "{$labels[5]}: {$booking->unit_count}",
-            "{$labels[6]}: ".$booking->unitType->translatedName($locale),
+            "{$labels[2]}: ".GuestBookingSummary::eventTypeName($booking->event_type, $locale),
+            "{$labels[3]}: {$dates}",
+            "{$labels[4]}: {$booking->guests}",
+        ];
+
+        if ($booking->setup_style) {
+            $lines[] = "{$labels[5]}: ".ucfirst($booking->setup_style);
+        }
+
+        return implode("\n", [
+            ...$lines,
+            "{$labels[6]}: ".$booking->space->translatedName($locale),
             "{$labels[7]}: ".($booking->notes ?: '-'),
             '',
             "{$labels[8]}: {$booking->reference}",
@@ -74,9 +85,9 @@ class ReservationHandover
     private function subject(string $key, string $locale): string
     {
         return [
-            'en' => ['reservation' => 'Stay request', 'staff' => 'Question for the apartment team', 'staff_message' => 'Hello, I would like to speak with the apartment team.'],
-            'ja' => ['reservation' => '滞在リクエスト', 'staff' => 'スタッフへのご相談', 'staff_message' => 'こんにちは。アパートメントのスタッフとお話ししたいです。'],
-            'id' => ['reservation' => 'Permintaan sewa unit', 'staff' => 'Pertanyaan untuk tim apartemen', 'staff_message' => 'Halo, saya ingin bicara dengan tim apartemen.'],
+            'en' => ['reservation' => 'Event request', 'staff' => 'Question for the events team', 'staff_message' => 'Hello, I would like to speak with the events team.'],
+            'ja' => ['reservation' => 'イベントのご依頼', 'staff' => 'イベントチームへのご相談', 'staff_message' => 'こんにちは。イベントチームとお話ししたいです。'],
+            'id' => ['reservation' => 'Permintaan acara', 'staff' => 'Pertanyaan untuk tim event', 'staff_message' => 'Halo, saya ingin bicara dengan tim event.'],
         ][$locale][$key];
     }
 }

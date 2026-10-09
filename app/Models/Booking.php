@@ -8,20 +8,20 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable([
     'reference',
-    'apartment_id',
-    'unit_type_id',
+    'venue_id',
+    'space_id',
     'conversation_id',
     'guest_name',
     'guest_email',
     'guest_phone',
     'contact_type',
     'locale',
-    'check_in',
-    'check_out',
-    'adults',
-    'children',
-    'unit_count',
-    'extra_bed',
+    'event_type',
+    'event_start',
+    'event_end',
+    'guests',
+    'setup_style',
+    'catering',
     'total_price',
     'status',
     'notes',
@@ -34,9 +34,11 @@ class Booking extends Model
 
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const EVENT_TYPES = ['wedding', 'corporate', 'conference', 'gala', 'birthday', 'exhibition', 'social'];
+
     /**
      * Which status a booking may move to from its current one. Cancelled is
-     * final: its units went back to the inventory and are not held any more.
+     * final: its dates went back to the inventory and are not held any more.
      *
      * @var array<string, list<string>>
      */
@@ -49,21 +51,22 @@ class Booking extends Model
     protected function casts(): array
     {
         return [
-            'check_in' => 'date',
-            'check_out' => 'date',
-            'extra_bed' => 'boolean',
+            'event_start' => 'date',
+            'event_end' => 'date',
+            'guests' => 'integer',
+            'catering' => 'boolean',
             'total_price' => 'decimal:2',
         ];
     }
 
-    public function apartment(): BelongsTo
+    public function venue(): BelongsTo
     {
-        return $this->belongsTo(Apartment::class);
+        return $this->belongsTo(Venue::class);
     }
 
-    public function unitType(): BelongsTo
+    public function space(): BelongsTo
     {
-        return $this->belongsTo(UnitType::class)->withTrashed();
+        return $this->belongsTo(Space::class)->withTrashed();
     }
 
     public function conversation(): BelongsTo
@@ -79,7 +82,7 @@ class Booking extends Model
         $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
         do {
-            $reference = 'BK-'.collect(range(1, 6))
+            $reference = 'EV-'.collect(range(1, 6))
                 ->map(fn () => $alphabet[random_int(0, strlen($alphabet) - 1)])
                 ->implode('');
         } while (static::where('reference', $reference)->exists());
@@ -92,8 +95,11 @@ class Booking extends Model
         return in_array($status, self::TRANSITIONS[$this->status] ?? [], true);
     }
 
-    public function nights(): int
+    /**
+     * Event days, counting both the first and the last.
+     */
+    public function days(): int
     {
-        return $this->check_in->diffInDays($this->check_out);
+        return (int) $this->event_start->diffInDays($this->event_end) + 1;
     }
 }

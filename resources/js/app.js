@@ -1,5 +1,5 @@
 import './sound';
-import './concierge';
+import './planner';
 import './reservation';
 import './stage';
 import './depth';

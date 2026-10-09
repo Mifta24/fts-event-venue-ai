@@ -9,7 +9,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Tells the apartment team that a guest asked to rent a unit.
+ * Tells the venue team that a guest asked to book a space for an event.
  */
 class NewBookingRequest extends Notification implements ShouldQueue
 {
@@ -30,16 +30,21 @@ class NewBookingRequest extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $booking = $this->booking->loadMissing(['apartment', 'unitType']);
+        $booking = $this->booking->loadMissing(['venue', 'space']);
         $contact = $booking->guest_phone ?? $booking->guest_email;
 
+        $guests = number_format($booking->guests, 0, ',', '.');
+        $dates = $booking->days() === 1
+            ? $booking->event_start->toFormattedDateString()
+            : "{$booking->event_start->toFormattedDateString()} to {$booking->event_end->toFormattedDateString()} ({$booking->days()} days)";
+
         return (new MailMessage)
-            ->subject("New stay request {$booking->reference} from {$booking->guest_name}")
-            ->greeting("New stay request for {$booking->apartment->name}")
-            ->line("{$booking->guest_name} asked for {$booking->unit_count} × {$booking->unitType->name}.")
-            ->line("Move-in {$booking->check_in->toFormattedDateString()}, move-out {$booking->check_out->toFormattedDateString()} ({$booking->nights()} nights).")
-            ->line("Residents: {$booking->adults} adults".($booking->children ? ", {$booking->children} children" : '').'.')
-            ->line("Total: {$booking->apartment->currency} ".number_format((float) $booking->total_price, 0, ',', '.').'.')
+            ->subject("New event request {$booking->reference} from {$booking->guest_name}")
+            ->greeting("New event request for {$booking->venue->name}")
+            ->line("{$booking->guest_name} asked for {$booking->space->name} for a ".str_replace('_', ' ', $booking->event_type).' event.')
+            ->line("Date: {$dates}.")
+            ->line("Guests: {$guests}".($booking->setup_style ? ", {$booking->setup_style} setup" : '').($booking->catering ? ', with catering' : '').'.')
+            ->line("Total: {$booking->venue->currency} ".number_format((float) $booking->total_price, 0, ',', '.').'.')
             ->line("Contact ({$booking->contact_type}): {$contact}")
             ->when($booking->notes, fn (MailMessage $mail) => $mail->line("Note: {$booking->notes}"))
             ->action('Review the request', route('admin.bookings.index', ['status' => Booking::STATUS_PENDING]));

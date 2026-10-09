@@ -2,7 +2,7 @@
 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" {{ $attributes }}>
     @switch($name)
         @case('about')
-            <rect x="5" y="3" width="14" height="18" rx="1.2"/><path d="M9 21v-4.5h6V21M9 7.5h1M14 7.5h1M9 11.5h1M14 11.5h1"/>
+            <path d="M4 21V9l8-6 8 6v12M9 21v-6h6v6M3 21h18"/><path d="M12 7.5v1.5"/>
             @break
         @case('policies')
             <path d="M12 3.5 19 6v5.5c0 4.6-3 8.2-7 9.3-4-1.1-7-4.7-7-9.3V6l7-2.5Z"/><path d="m9.2 12 1.9 1.9 3.7-3.8"/>

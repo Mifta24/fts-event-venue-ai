@@ -31,13 +31,13 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
-        RateLimiter::for('concierge-start', fn (Request $request) => Limit::perMinute(10)->by('start:'.$request->ip()));
+        RateLimiter::for('planner-start', fn (Request $request) => Limit::perMinute(10)->by('start:'.$request->ip()));
 
-        RateLimiter::for('concierge-message', fn (Request $request) => [
+        RateLimiter::for('planner-message', fn (Request $request) => [
             Limit::perMinute(12)->by('conversation:'.($request->input('guest_token') ?: $request->ip())),
             Limit::perMinute(40)->by('ip:'.$request->ip()),
         ]);
 
-        RateLimiter::for('concierge-history', fn (Request $request) => Limit::perMinute(60)->by('history:'.$request->ip()));
+        RateLimiter::for('planner-history', fn (Request $request) => Limit::perMinute(60)->by('history:'.$request->ip()));
     }
 }

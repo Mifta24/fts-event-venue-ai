@@ -1,10 +1,10 @@
 /**
  * Small UI sounds, synthesised with the Web Audio API (no audio files):
- * a lift button beep and arrival chime when moving between floors, a soft "ding" for incoming messages and a
+ * a celesta-style curtain chime when moving between cues, a soft "ding" for incoming messages and a
  * short "pop" when sending or toggling. Sound only ever follows a guest action, never plays on
  * its own, and can be muted with the header toggle (remembered per browser).
  */
-const STORAGE_KEY = 'apartment_sound';
+const STORAGE_KEY = 'venue_sound';
 
 let context = null;
 let master = null;
@@ -72,11 +72,12 @@ function pop(fromFrequency, toFrequency, start, duration, gain) {
 }
 
 const sounds = {
-    /** Lift call: the button beep, then the two-tone arrival chime. */
+    /** Curtain call: a short rising arpeggio, like a celesta before the house lights dim. */
     enter(now) {
-        tone(1568, now, 0.09, 0.07);
-        bell(1318.51, now + 0.16, 0.13, 0.9);
-        bell(987.77, now + 0.5, 0.13, 1.1);
+        bell(783.99, now, 0.1, 0.7);
+        bell(987.77, now + 0.12, 0.1, 0.75);
+        bell(1318.51, now + 0.24, 0.12, 0.8);
+        bell(1567.98, now + 0.38, 0.1, 1.2);
     },
     incoming(now) {
         bell(880, now, 0.11, 0.55);
@@ -123,6 +124,6 @@ function initSoundToggle() {
     });
 }
 
-window.apartmentSound = { play, isEnabled };
+window.venueSound = { play, isEnabled };
 
 document.addEventListener('DOMContentLoaded', initSoundToggle);

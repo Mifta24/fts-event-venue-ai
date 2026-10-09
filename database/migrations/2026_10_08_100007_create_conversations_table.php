@@ -1,0 +1,33 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('conversations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('venue_id')->constrained()->cascadeOnDelete();
+            $table->uuid('guest_token')->unique();
+            $table->string('guest_name')->nullable();
+            $table->string('guest_email')->nullable();
+            $table->string('locale', 2)->default('id');
+            $table->string('status')->default('active'); // active | handed_over | closed
+            $table->string('current_scene', 20)->default('reception');
+            $table->foreignId('selected_space_id')->nullable()->constrained('spaces')->nullOnDelete();
+            $table->foreignId('selected_facility_id')->nullable()->constrained('venue_knowledge_items')->nullOnDelete();
+            $table->json('reservation_state')->nullable();
+            $table->text('handover_summary')->nullable();
+            $table->timestamp('last_message_at')->nullable();
+            $table->timestamps();
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('conversations');
+    }
+};

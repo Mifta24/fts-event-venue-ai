@@ -9,10 +9,14 @@ export default defineConfig({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
             fonts: [
-                bunny('Space Grotesk', {
+                bunny('DM Sans', {
                     weights: [400, 500, 600, 700],
                 }),
-                bunny('IBM Plex Mono', {
+                bunny('Playfair Display', {
+                    weights: [500, 600, 700],
+                    styles: ['normal', 'italic'],
+                }),
+                bunny('DM Mono', {
                     weights: [400, 500],
                 }),
             ],

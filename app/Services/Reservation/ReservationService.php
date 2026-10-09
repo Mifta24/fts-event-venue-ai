@@ -2,11 +2,11 @@
 
 namespace App\Services\Reservation;
 
-use App\Models\Apartment;
 use App\Models\Booking;
 use App\Models\Conversation;
-use App\Models\UnitInventory;
-use App\Models\UnitType;
+use App\Models\Space;
+use App\Models\SpaceInventory;
+use App\Models\Venue;
 use App\Notifications\BookingRequestReceived;
 use App\Notifications\BookingStatusChanged;
 use App\Notifications\NewBookingRequest;
@@ -16,50 +16,53 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification as NotificationFacade;
 
 /**
- * The single place where stay prices, availability and reservation requests
- * are computed. Both the AI concierge tools and the guest-facing reservation
+ * The single place where event prices, availability and booking requests
+ * are computed. Both the AI planner tools and the guest-facing reservation
  * wizard go through here, so they can never disagree.
  */
 class ReservationService
 {
-    /** Apartments take long stays, so a request may cover up to about three months. */
-    public const MAX_NIGHTS = 90;
+    /** An event may run for up to two weeks online; longer ones go to the events team. */
+    public const MAX_DAYS = 14;
 
     /**
-     * Whether the requested party fits the unit type across the requested units.
+     * Whether the space can host this many guests, in the given setup or, when
+     * no setup is chosen, in its roomiest one.
      */
-    public function fitsOccupancy(UnitType $unitType, int $adults, int $children, int $units): bool
+    public function fitsCapacity(Space $space, int $guests, ?string $layout = null): bool
     {
-        return $adults <= $unitType->max_adults * $units
-            && ($adults + $children) <= $unitType->maxOccupancy() * $units;
+        $capacity = $layout ? $space->capacityFor($layout) : $space->maxGuests();
+
+        return $capacity !== null && $guests >= 1 && $guests <= $capacity;
     }
 
     /**
-     * Prices a stay across every night in range, then takes off the
-     * apartment's weekly or monthly long-stay discount. Returns null if any
-     * night lacks enough free units — this is the one place price and
-     * availability truth comes from, never the model.
+     * Prices an event across every day in range (both ends included), adds
+     * catering per guest and per day when asked, then takes off the venue's
+     * weekday or multi-day discount. Returns null if any day is already taken
+     * — this is the one place price and availability truth comes from, never
+     * the model.
      *
-     * @return array{nights: int, nightly: list<array{date: string, price: float}>, unit_total: float, extra_bed_total: float, subtotal: float, discount_percent: int, discount_total: float, grand_total: float, min_available_units: int}|null
+     * @return array{days: int, daily: list<array{date: string, price: float}>, space_total: float, catering_total: float, subtotal: float, discount_percent: int, discount_total: float, grand_total: float, min_available_units: int}|null
      */
     public function quote(
-        UnitType $unitType,
-        CarbonImmutable $checkIn,
-        CarbonImmutable $checkOut,
-        int $units = 1,
-        bool $extraBed = false,
+        Space $space,
+        CarbonImmutable $start,
+        CarbonImmutable $end,
+        int $guests = 0,
+        bool $catering = false,
         bool $lockForUpdate = false,
     ): ?array {
-        $nights = $checkIn->diffInDays($checkOut);
+        $days = (int) $start->diffInDays($end) + 1;
 
-        if ($nights < 1) {
+        if ($days < 1) {
             return null;
         }
 
-        $query = UnitInventory::where('unit_type_id', $unitType->id)
-            ->whereDate('stay_date', '>=', $checkIn->toDateString())
-            ->whereDate('stay_date', '<=', $checkOut->subDay()->toDateString())
-            ->orderBy('stay_date');
+        $query = SpaceInventory::where('space_id', $space->id)
+            ->whereDate('event_date', '>=', $start->toDateString())
+            ->whereDate('event_date', '<=', $end->toDateString())
+            ->orderBy('event_date');
 
         if ($lockForUpdate) {
             $query->lockForUpdate();
@@ -67,38 +70,37 @@ class ReservationService
 
         $inventory = $query->get();
 
-        if ($inventory->count() < $nights) {
+        if ($inventory->count() < $days) {
             return null;
         }
 
-        $nightly = [];
-        $perUnitTotal = 0.0;
+        $daily = [];
+        $spaceTotal = 0.0;
         $minAvailable = PHP_INT_MAX;
 
-        foreach ($inventory as $night) {
-            if ($night->availableUnits() < $units) {
+        foreach ($inventory as $day) {
+            if ($day->availableUnits() < 1) {
                 return null;
             }
 
-            $nightly[] = ['date' => $night->stay_date->toDateString(), 'price' => (float) $night->price];
-            $perUnitTotal += (float) $night->price;
-            $minAvailable = min($minAvailable, $night->availableUnits());
+            $daily[] = ['date' => $day->event_date->toDateString(), 'price' => (float) $day->price];
+            $spaceTotal += (float) $day->price;
+            $minAvailable = min($minAvailable, $day->availableUnits());
         }
 
-        $unitTotal = $perUnitTotal * $units;
-        $extraBedTotal = $extraBed && $unitType->extra_bed_available
-            ? (float) $unitType->extra_bed_price * $nights * $units
+        $cateringTotal = $catering && $space->catering_available
+            ? (float) $space->catering_price * max(0, $guests) * $days
             : 0.0;
 
-        $subtotal = $unitTotal + $extraBedTotal;
-        $discountPercent = $unitType->apartment->longStayDiscountPercent($nights);
+        $subtotal = $spaceTotal + $cateringTotal;
+        $discountPercent = $space->venue->eventDiscountPercent($start, $days);
         $discountTotal = round($subtotal * $discountPercent / 100, 2);
 
         return [
-            'nights' => $nights,
-            'nightly' => $nightly,
-            'unit_total' => $unitTotal,
-            'extra_bed_total' => $extraBedTotal,
+            'days' => $days,
+            'daily' => $daily,
+            'space_total' => $spaceTotal,
+            'catering_total' => $cateringTotal,
             'subtotal' => $subtotal,
             'discount_percent' => $discountPercent,
             'discount_total' => $discountTotal,
@@ -108,18 +110,17 @@ class ReservationService
     }
 
     /**
-     * Creates a pending reservation request and holds the inventory for it.
-     * Returns null when the unit is no longer available for those nights.
+     * Creates a pending event request and holds the dates for it. Returns
+     * null when the space is no longer free on those days.
      *
-     * @param  array{check_in: CarbonImmutable, check_out: CarbonImmutable, adults: int, children?: int, units?: int, extra_bed?: bool, guest_name: string, guest_email?: ?string, guest_phone?: ?string, contact_type?: ?string, locale?: ?string, notes?: ?string}  $data
+     * @param  array{event_start: CarbonImmutable, event_end: CarbonImmutable, event_type: string, guests: int, setup_style?: ?string, catering?: bool, guest_name: string, guest_email?: ?string, guest_phone?: ?string, contact_type?: ?string, locale?: ?string, notes?: ?string}  $data
      */
-    public function createRequest(Apartment $apartment, UnitType $unitType, array $data, ?Conversation $conversation = null): ?Booking
+    public function createRequest(Venue $venue, Space $space, array $data, ?Conversation $conversation = null): ?Booking
     {
-        $units = $data['units'] ?? 1;
-        $extraBed = (bool) ($data['extra_bed'] ?? false);
+        $catering = (bool) ($data['catering'] ?? false) && $space->catering_available;
 
-        $booking = DB::transaction(function () use ($apartment, $unitType, $data, $conversation, $units, $extraBed) {
-            $quote = $this->quote($unitType, $data['check_in'], $data['check_out'], $units, $extraBed, lockForUpdate: true);
+        $booking = DB::transaction(function () use ($venue, $space, $data, $conversation, $catering) {
+            $quote = $this->quote($space, $data['event_start'], $data['event_end'], $data['guests'], $catering, lockForUpdate: true);
 
             if (! $quote) {
                 return null;
@@ -127,20 +128,20 @@ class ReservationService
 
             $booking = Booking::create([
                 'reference' => Booking::generateReference(),
-                'apartment_id' => $apartment->id,
-                'unit_type_id' => $unitType->id,
+                'venue_id' => $venue->id,
+                'space_id' => $space->id,
                 'conversation_id' => $conversation?->id,
                 'guest_name' => $data['guest_name'],
                 'guest_email' => $data['guest_email'] ?? null,
                 'guest_phone' => $data['guest_phone'] ?? null,
                 'contact_type' => $data['contact_type'] ?? null,
                 'locale' => $data['locale'] ?? null,
-                'check_in' => $data['check_in']->toDateString(),
-                'check_out' => $data['check_out']->toDateString(),
-                'adults' => $data['adults'],
-                'children' => $data['children'] ?? 0,
-                'unit_count' => $units,
-                'extra_bed' => $extraBed && $unitType->extra_bed_available,
+                'event_type' => $data['event_type'],
+                'event_start' => $data['event_start']->toDateString(),
+                'event_end' => $data['event_end']->toDateString(),
+                'guests' => $data['guests'],
+                'setup_style' => $data['setup_style'] ?? null,
+                'catering' => $catering,
                 'total_price' => $quote['grand_total'],
                 'status' => Booking::STATUS_PENDING,
                 'notes' => $data['notes'] ?? null,
@@ -152,7 +153,7 @@ class ReservationService
         });
 
         if ($booking) {
-            $apartment->notifyStaff(new NewBookingRequest($booking));
+            $venue->notifyStaff(new NewBookingRequest($booking));
             $this->notifyGuest($booking, new BookingRequestReceived($booking));
         }
 
@@ -162,7 +163,7 @@ class ReservationService
     /**
      * Confirms or cancels a booking. Returns false when its current status
      * does not allow the change, so a cancelled booking can never come back
-     * without its units being held again. Cancelling gives the units back.
+     * without its dates being held again. Cancelling frees the dates.
      */
     public function changeStatus(Booking $booking, string $status): bool
     {
@@ -203,7 +204,7 @@ class ReservationService
     }
 
     /**
-     * Gives the units held by a booking back to the inventory.
+     * Gives the dates held by a booking back to the inventory.
      */
     public function releaseInventory(Booking $booking): void
     {
@@ -212,9 +213,9 @@ class ReservationService
 
     private function adjustInventory(Booking $booking, int $direction): void
     {
-        UnitInventory::where('unit_type_id', $booking->unit_type_id)
-            ->whereDate('stay_date', '>=', $booking->check_in->toDateString())
-            ->whereDate('stay_date', '<=', $booking->check_out->copy()->subDay()->toDateString())
-            ->{$direction > 0 ? 'increment' : 'decrement'}('booked_units', $booking->unit_count);
+        SpaceInventory::where('space_id', $booking->space_id)
+            ->whereDate('event_date', '>=', $booking->event_start->toDateString())
+            ->whereDate('event_date', '<=', $booking->event_end->toDateString())
+            ->{$direction > 0 ? 'increment' : 'decrement'}('booked_units');
     }
 }
