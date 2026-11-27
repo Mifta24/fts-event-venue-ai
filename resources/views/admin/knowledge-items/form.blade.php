@@ -21,7 +21,7 @@
                 </div>
                 <div class="col-span-2">
                     <label class="block text-sm font-medium text-stone-700">Tags (comma-separated, helps the AI match guest questions)</label>
-                    <input type="text" name="tags" value="{{ old('tags', implode(', ', $item->tags ?? [])) }}" placeholder="check-in, late check-in, front desk"
+                    <input type="text" name="tags" value="{{ old('tags', implode(', ', $item->tags ?? [])) }}" placeholder="load-in, curfew, parking"
                         class="mt-1 w-full rounded-lg border border-stone-300 px-3 py-2 text-sm">
                 </div>
                 <div class="col-span-2">
