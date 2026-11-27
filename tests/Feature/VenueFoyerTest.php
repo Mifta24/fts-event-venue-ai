@@ -500,7 +500,7 @@ class VenueFoyerTest extends TestCase
             ->assertOk()
             ->assertSee('photo-1560585810-44ce3741dd3b', false)
             ->assertSee('class="stage-character" data-pose="standing"', false)
-            ->assertSee('images/character/character avatar.jpg', false);
+            ->assertSee('images/character/character avatar.jpg?v='.filemtime(public_path('images/character/character avatar.jpg')), false);
         $this->get('/demo/staff')->assertOk()->assertSee('class="stage-character" data-pose="consulting"', false);
         $this->get('/demo/reservation')->assertOk()->assertSee('class="stage-character" data-pose="consulting"', false);
 
