@@ -185,6 +185,18 @@ class PlannerChatTest extends TestCase
         $this->assertStringContainsString('Treat "this space" or "this hall" as that space', $prompt);
     }
 
+    public function test_the_planner_knows_the_real_space_names_without_a_tool_call(): void
+    {
+        $this->venue->spaces()->create(['name' => 'Hidden Loft', 'slug' => 'hidden-loft', 'base_price' => 1, 'layouts' => ['banquet' => 10], 'is_active' => false, 'sort_order' => 9]);
+        $this->fakeReply();
+
+        $this->postJson('/demo/planner/message', ['guest_token' => $this->startConversation(), 'message' => 'What event spaces do you have?'])->assertOk();
+
+        $prompt = $this->systemPromptOfLastRequest();
+        $this->assertStringContainsString('Spaces (use these names and slugs): Grand Hall (grand-hall)', $prompt);
+        $this->assertStringNotContainsString('Hidden Loft', $prompt);
+    }
+
     public function test_the_planner_is_told_to_stay_within_the_venue_and_decline_everything_else(): void
     {
         $this->fakeReply();

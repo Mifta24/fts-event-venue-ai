@@ -454,6 +454,7 @@ class PlannerService
             "Current scene: {$scene}",
             'Selected space: '.($space ? "{$space->name} (slug: {$space->slug})" : 'none'),
             'Selected facility: '.($conversation->selectedFacility?->title ?? 'none'),
+            'Spaces (use these names and slugs): '.$conversation->venue->spaces()->where('is_active', true)->orderBy('sort_order')->get()->map(fn ($space) => "{$space->name} ({$space->slug})")->implode(', '),
         ];
 
         $draft = $conversation->reservation_state;
